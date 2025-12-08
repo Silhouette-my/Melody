@@ -1,8 +1,16 @@
 import json as js
 import os
 import numpy as py
-import pygame
-pygame.init()
+import pygame as pg
+def flag_judge(flag_now,file_play_len):
+	if(flag_now == -1 or flag_now == file_play_len-1):
+		return 0;
+	else: return 1;
+def text_draw(title_flag,font):
+	text = title_song[title_flag]
+	text_image = font.render(text,True,'white')
+	screen.blit(text_image,(350,250)) 
+pg.init()
 root = os.getcwd()
 path = os.listdir(root)
 file_play = list()
@@ -19,14 +27,31 @@ for i in range(0,len(file_play),1):
 		get_content = js.load(file)
 	title_song.append(get_content['meta']['song']['title'])
 
+screen = pg.display.set_mode((800, 600))
+clock = pg.time.Clock()
+title_flag = 0
+font = pg.font.SysFont(None,36)
+text_draw(title_flag,font)
 isRunning = True
 while isRunning:
-	for ev in pygame.event.get():
-		if(ev.type == pygame.QUIT):
+	for ev in pg.event.get():
+		_bool = flag_judge(title_flag,len(title_song))
+		if(ev.type == pg.QUIT):
 			isRunning = False
 			break
-	screen = pygame.display.set_mode((800, 600))
-pygame.quit()
+		elif(ev.type == pg.KEYDOWN):
+			if(ev.key == pg.K_DOWN and _bool):
+				title_flag += 1
+				text_draw(title_flag,font)
+				break
+
+
+
+	pg.display.update()
+	clock.tick(60)
+
+
+pg.quit()
 
 
 
