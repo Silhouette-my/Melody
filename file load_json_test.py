@@ -1,9 +1,12 @@
 import json as js
 import os
 import numpy as py
+import pygame
+pygame.init()
 root = os.getcwd()
 path = os.listdir(root)
 file_play = list()
+title_song = list()
 for p in path:
 	type_file = os.path.splitext(p)
 	#print(type_file[1])
@@ -14,11 +17,18 @@ for i in range(0,len(file_play),1):
 	use_file = file_play[i]
 	with open(use_file,'r',encoding = 'utf-8') as file:
 		get_content = js.load(file)
-		#print(get_content)
-	meta_read = get_content['meta']
-	note_read = get_content['note']
-	print(meta_read,'\n')
-	print(note_read)
+	title_song.append(get_content['meta']['song']['title'])
+
+isRunning = True
+while isRunning:
+	for ev in pygame.event.get():
+		if(ev.type == pygame.QUIT):
+			isRunning = False
+			break
+	screen = pygame.display.set_mode((800, 600))
+pygame.quit()
+
+
 
 
 
