@@ -3,8 +3,8 @@ import os
 import numpy as py
 import pygame as pg
 #保证0<=title_flag<=曲目个数-1(防数组超界)
-def flag_judge(flag_now,file_play_len):
-	if(flag_now == -1 or flag_now == file_play_len-1):
+def flag_judge(flag_now,file_play_len,lower):
+	if(flag_now == lower or flag_now == file_play_len-1):
 		return 0;
 	else: return 1;
 
@@ -58,8 +58,8 @@ isRunning = True
 
 while isRunning:
 	for ev in pg.event.get():
-		bool_down = flag_judge(title_flag,len(title_song))
-		bool_up = flag_judge(title_flag,len(title_song)+1)
+		bool_down = flag_judge(title_flag,len(title_song),-1)
+		bool_up = flag_judge(title_flag,len(title_song)+1,0)
 		if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
 			isRunning = False
 			break
