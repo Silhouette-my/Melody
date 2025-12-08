@@ -9,6 +9,7 @@ for p in path:
 	#print(type_file[1])
 	if(type_file[1] == '.json'):
 		file_play.append(p)
+#上面这部分是搜寻Melody这个文件夹下的.json文件并保存到file_play列表里面
 for i in range(0,len(file_play),1):
 	use_file = file_play[i]
 	with open(use_file,'r',encoding = 'utf-8') as file:
