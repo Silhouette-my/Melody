@@ -3,6 +3,7 @@ import os
 import numpy as py
 import pygame as pg
 
+#绘制主界面的start,settings,quit
 def screen_interface(screen,font):
 	start = "start"
 	settings = "settings"
@@ -17,10 +18,11 @@ def screen_interface(screen,font):
 		text_image.append(font.render(text[i],True,'white'))
 		text_rect.append(text_image[i].get_rect())
 		t_height = text_rect[i].height
-		text_rect[i].center = (mid_pos[0],mid_pos[1]+(i-1)*2*t_height)
+		text_rect[i].center = (mid_pos[0],mid_pos[1]+(i-1)*2*t_height) #从上往下依次绘制
 		screen.blit(text_image[i],text_rect[i])
 	return text_rect
 
+#绘制选项提示框
 def button_border_draw(screen,text_rect,select_flag):
 	border_x = text_rect[select_flag].x-5
 	border_y = text_rect[select_flag].y-5
@@ -32,6 +34,7 @@ def button_border_draw(screen,text_rect,select_flag):
 	pg.draw.rect(screen, border_color, last_rect, border_line_width)
 	return last_rect
 
+#清除上一次的选项提示框
 def button_border_clear(screen,last_rect):
 	pg.draw.rect(screen,'black',last_rect,1)
 
