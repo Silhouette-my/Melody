@@ -99,10 +99,3 @@ while isRunning:
 
 pg.quit()
 #主程序
-
-
-
-
-
-
-
