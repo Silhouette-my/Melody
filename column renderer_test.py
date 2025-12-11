@@ -3,7 +3,7 @@ import json as js
 import os
 import numpy as py
 import pygame as pg
-#Malody的'beat'的格式为[x,y,z],代表第x拍的第y/z份
+#Malody的'beat'的格式为[x,y,z],代表第x+y/z拍(?)
 #
 def note_load(note_file,bpm,screen,clock,note_current,rect_note_current,sp,start_time):
 	#
