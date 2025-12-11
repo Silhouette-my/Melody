@@ -32,7 +32,7 @@ def note_load(note_file,bpm,screen,clock,note_current,rect_note_current,sp,start
 			del note_current[i]
 			del rect_note_current[i]
 		else: i += 1
-	clock.tick(60) #维持帧率
+	clock.tick(100) #维持帧率
 	return sp
 #
 #判断是否要将note加入到note_current中并且给要加入的note初始化rect对象(pygame里面的矩形对象)
@@ -76,7 +76,7 @@ def note_draw(column,last_rect,time_diff,fall_speed,screen):
 	if(last_rect.y <= s_height):
 		pg.draw.rect(screen,'black',last_rect,0) #用黑色矩形覆盖上一次显示的白色矩形
 		last_rect.y = time_diff*fall_speed
-		if(time_diff >= 0):
+		if(time_diff >= 0): #只渲染会出现在屏幕里的note
 			pg.draw.rect(screen,'white',last_rect,0)
 		return last_rect		
 #
@@ -139,7 +139,7 @@ while isRunning:
 	pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
 	sp = note_load(note,bpm,screen,clock,note_current,rect_note_current,sp,start_time)
 	pg.display.update()
-	clock.tick(60) #两次循环间隔(等价于60帧,保证按键有不响应期)
+	clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
 
 pg.quit()
 #主程序
