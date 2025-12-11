@@ -17,7 +17,7 @@ def note_judge(note_file,note_wait,bar_count,sp,length):
 	elif(sp == length-1): return -1
 
 def note_draw(column,note_bar,note_bar_div,bar_count,present_time,screen):
-
+	
 def note_load(note_file,bpm,screen):
 	length = len(note_file)
 	bar_delta = 60/bpm
