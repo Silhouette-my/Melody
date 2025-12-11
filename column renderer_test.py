@@ -114,7 +114,8 @@ column_positions = [
 	s_width/2-3*50,
 	s_width/2-1*50,
 	s_width/2+1*50,
-	s_width/2+3*50
+	s_width/2+3*50,
+	s_width/2+5*50
 ]
 
 clock = pg.time.Clock()	#计时器
@@ -133,7 +134,7 @@ while isRunning:
     
     # 绘制判定线
 	for pos in column_positions:
-		pg.draw.line(screen, (100, 100, 100), (pos, 0), (pos, s_height), 2)
+		pg.draw.line(screen, (100, 100, 100), (pos-50, 0), (pos-50, s_height), 2)
     
     # 绘制主要的判定线（note应该到达的位置）
 	pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
