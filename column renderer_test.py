@@ -4,11 +4,11 @@ import numpy as py
 import pygame as pg
 #Malody的'beat'的格式为[x,y,z],代表第x+y/z拍(?)
 #
-def note_load(note_file,bpm,screen,clock,note_current,rect_note_current,sp,start_time):
+def note_load(note_file,bpm,screen,clock,note_current,rect_note_current,sp,start_time,fall_speed):
 	#
 	length = len(note_file) #note的个数+1(Malody的note信息里面多了一个配置信息)
 	bar_delta = 60.0/bpm*4 #一小节的时长
-	fall_speed = 800 #下落速度
+
 	s_height = pg.Surface.get_height(screen) #获取窗口宽度
 
 	# 获取当前小节位置(基于开始时间)
@@ -93,14 +93,16 @@ def note_draw(column,last_rect,time_diff,fall_speed,screen):
 	if(last_rect.y <= s_height):
 		pg.draw.rect(screen,'black',last_rect,0) #用黑色矩形覆盖上一次显示的白色矩形
 		last_rect.y = time_diff*fall_speed
-		if(time_diff >= -last_rect.height*fall_speed): #只渲染会出现在屏幕里的note,且在其出现前就预渲染好(避免长条渲染出错)
+		if(time_diff >= -last_rect.height/fall_speed): #只渲染会出现在屏幕里的note,且在其出现前就预渲染好(避免长条渲染出错)
 			pg.draw.rect(screen,'white',last_rect,0)
 		return last_rect		
 #
 #
 note_current = []
 rect_note_current = []
-sp = 0	
+sp = 0
+fall_speed = 800 #下落速度
+
 pg.init()#pygame初始化
 #读取铺面文件所在路径
 root = os.getcwd()
@@ -155,7 +157,7 @@ while isRunning:
     
     # 绘制主要的判定线（note应该到达的位置）
 	pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
-	sp = note_load(note,bpm,screen,clock,note_current,rect_note_current,sp,start_time)
+	sp = note_load(note,bpm,screen,clock,note_current,rect_note_current,sp,start_time,fall_speed)
 	pg.display.update()
 	clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
 
