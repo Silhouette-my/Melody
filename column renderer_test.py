@@ -1,4 +1,3 @@
-#undone
 import json as js
 import os
 import numpy as py
@@ -113,7 +112,7 @@ for p in path:
 	type_file = os.path.splitext(p)
 	if(type_file[1] == '.json'):
 		file_play.append(p)
-file_choose = file_play[0] #此处可手动更改铺面
+file_choose = file_play[1] #此处可手动更改铺面
 with open(file_choose,'r',encoding = 'utf-8') as file:
 	get_content = js.load(file)
 bpm = get_content['time'][0]['bpm'] #提取bpm信息
