@@ -29,7 +29,7 @@ def note_load(note_file,bpm,screen,clock,note_current,rect_note_current,sp,start
 
 		if(rect_note_current[i].y > s_height-50):
 			rank_level_judge[3] += 1
-			print("miss",'\n')
+			last_text_rect = text_draw('miss',screen)
 			flag = 1
 			note_draw(column,rect_note_current[i],time_diff,fall_speed,screen,flag)
 		
@@ -134,31 +134,43 @@ def note_keyboard_judge(keyboard_input,note_current,rect_note_current,start_time
 				if(judge_time_diff <= 50):
 					rank_level_judge[0] += 1
 					pg.draw.rect(screen,'black',rect_note_current[i],0)
-					print("perfect",'\n')
+					text_draw('prefect',screen)
 					del note_current[i]
 					del rect_note_current[i]
 				elif(judge_time_diff <= 80):
 					rank_level_judge[1] += 1
 					pg.draw.rect(screen,'black',rect_note_current[i],0)
-					print("good",'\n')
+					text_draw('good',screen)
 					del note_current[i]
 					del rect_note_current[i]
 				elif(judge_time_diff <= 120):
 					rank_level_judge[2] += 1
 					pg.draw.rect(screen,'black',rect_note_current[i],0)
-					print("bad",'\n')
+					text_draw('bad',screen)
 					del note_current[i]
 					del rect_note_current[i]
 				else:
 					rank_level_judge[3] += 1
 					pg.draw.rect(screen,'black',rect_note_current[i],0)
-					print("miss",'\n')
+					text_draw('miss',screen)
 					del note_current[i]
 					del rect_note_current[i]
 				pg.display.update()
 				break
 			else: i += 1
 
+def text_draw(judge,screen):
+	s_width = pg.Surface.get_width(screen)
+	s_height = pg.Surface.get_height(screen)
+	text = judge
+	font = pg.font.SysFont(None,57)
+	alpha_value = 180
+
+	text_image = font.render(text,True,'gray')
+	text_image.set_alpha(alpha_value)
+	text_rect = text_image.get_rect()
+	text_rect.center = (s_width/2,s_height/3)
+	screen.blit(text_image,text_rect)
 
 note_current = []
 rect_note_current = []
