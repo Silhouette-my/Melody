@@ -8,7 +8,7 @@ def note_load(note_file,bpm,screen,clock,note_current,rect_note_current,sp,start
 	#
 	length = len(note_file) #note的个数+1(Malody的note信息里面多了一个配置信息)
 	bar_delta = 60.0/bpm*4 #一小节的时长
-	fall_speed = 600 #下落速度
+	fall_speed = 800 #下落速度
 	s_height = pg.Surface.get_height(screen) #获取窗口宽度
 
 	# 获取当前小节位置(基于开始时间)
