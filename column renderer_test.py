@@ -8,7 +8,7 @@ def note_load(note_file,bpm,screen,clock,note_current,rect_note_current,sp,start
 	#
 	length = len(note_file) #note的个数+1(Malody的note信息里面多了一个配置信息)
 	bar_delta = 60.0/bpm*4 #一小节的时长
-	fall_speed = 800 #下落速度
+	fall_speed = 600 #下落速度
 	s_height = pg.Surface.get_height(screen) #获取窗口宽度
 
 	# 获取当前小节位置(基于开始时间)
@@ -83,9 +83,9 @@ def note_judge(note_file,note_current,rect_note_current,current_beat,bar_delta,s
 					rect.centerx = column_positions[tail_note['column']] #矩形中心横坐标
 					rect_note_current.append(rect)
 			sp += 1
-		elif(current_beat >= current_beat + 8): break #如果下一个note的拍数比当前拍数+8还大则直接退出(减运算量)
+		elif(tail_note_bar >= current_beat + 8): break #如果下一个note的拍数比当前拍数+8还大则直接退出(减运算量)
 		elif(sp == length -1): return -1 #note数据读取完毕
-		return sp	
+	return sp	
 #
 #
 def note_draw(column,last_rect,time_diff,fall_speed,screen):
@@ -112,7 +112,7 @@ for p in path:
 	type_file = os.path.splitext(p)
 	if(type_file[1] == '.json'):
 		file_play.append(p)
-file_choose = file_play[1] #此处可手动更改铺面
+file_choose = file_play[0] #此处可手动更改铺面
 with open(file_choose,'r',encoding = 'utf-8') as file:
 	get_content = js.load(file)
 bpm = get_content['time'][0]['bpm'] #提取bpm信息
