@@ -46,6 +46,7 @@ def note_load(note_file,bpm,screen,clock,note_current,rect_note_current,sp,start
 #
 #判断是否要将note加入到note_current中并且给要加入的note初始化rect对象(pygame里面的矩形对象)
 def note_judge(note_file,note_current,rect_note_current,current_beat,bar_delta,sp,length,fall_speed,screen):
+	if(sp == -1): return -1
 	while(sp < length):
 		tail_note = note_file[sp] #sp指向当前未放入的第一个note
 		tail_note_info = tail_note['beat'] 
@@ -172,11 +173,13 @@ def text_draw(judge,screen):
 	text_rect.center = (s_width/2,s_height/3)
 	screen.blit(text_image,text_rect)
 
+#def judge_situation_present(screen):
+
 note_current = []
 rect_note_current = []
 rank_level_judge = [0,0,0,0]
 sp = 0
-fall_speed = 800 #下落速度	
+fall_speed = 650 #下落速度	
 
 pg.init()#pygame初始化
 #读取铺面文件所在路径
@@ -189,7 +192,7 @@ for p in path:
 	type_file = os.path.splitext(p)
 	if(type_file[1] == '.json'):
 		file_play.append(p)
-file_choose = file_play[0] #此处可手动更改铺面
+file_choose = file_play[1] #此处可手动更改铺面
 with open(file_choose,'r',encoding = 'utf-8') as file:
 	get_content = js.load(file)
 bpm = get_content['time'][0]['bpm'] #提取bpm信息
@@ -221,10 +224,16 @@ while isRunning:
 	for ev in pg.event.get():
 		if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
 			isRunning = False
-			break
+			breaksk
 		if(sp == -1):
-			isRunning = False
-			break
+			if(ev.type == pg.KEYDOWN):
+				if(ev.key == pg.K_ESCAPE):
+					isRunning = False
+					break
+		if(ev.type == pg.KEYDOWN):
+			if(ev.key == pg.K_ESCAPE):
+				isRunning = False
+				break
 		if(ev.type == pg.KEYDOWN):
 			note_keyboard_judge(ev.key,note_current,rect_note_current,start_time,fall_speed,screen,rank_level_judge)
 	screen.blit(background, (0, 0))
