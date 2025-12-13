@@ -127,11 +127,17 @@ def note_keyboard_judge(keyboard_input,note_current,rect_note_current,start_time
 
 	if(isKeyuse):
 		i = 0
+		flag1 = 0
 		for note in note_current:
-			if(rect_note_current[i].y < (s_height-100)/3*2):
+			if(not 'endbeat' in note): 
+				flag1 = 1
+			if(flag1 and rect_note_current[i].y < (s_height-100)/3*2):
 				break
 			if(note['column'] == keyboard_map):
-				judge_time_diff = np.fabs((rect_note_current[i].y+100.0-s_height)/fall_speed*1000)
+				if(flag1):
+					judge_time_diff = np.fabs((rect_note_current[i].y+100.0-s_height)/fall_speed*1000)
+				else:
+					judge_time_diff = np.fabs((rect_note_current[i].y+rect_note_current[i].height+100.0-s_height)/fall_speed*1000)
 				if(judge_time_diff <= 50):
 					rank_level_judge[0] += 1
 					pg.draw.rect(screen,'black',rect_note_current[i],0)
@@ -224,7 +230,7 @@ while isRunning:
 	for ev in pg.event.get():
 		if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
 			isRunning = False
-			breaksk
+			break
 		if(sp == -1):
 			if(ev.type == pg.KEYDOWN):
 				if(ev.key == pg.K_ESCAPE):
