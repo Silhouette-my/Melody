@@ -179,13 +179,18 @@ def text_draw(judge,screen):
 	text_rect.center = (s_width/2,s_height/3)
 	screen.blit(text_image,text_rect)
 
-#def judge_situation_present(screen):
 
+
+#def judge_situation_present(screen):
+	
 note_current = []
 rect_note_current = []
 rank_level_judge = [0,0,0,0]
 sp = 0
-fall_speed = 650 #下落速度	
+fall_speed = 650 #下落速度
+
+song_player = list()
+song_player_name = list()	
 
 pg.init()#pygame初始化
 #读取铺面文件所在路径
@@ -198,12 +203,24 @@ for p in path:
 	type_file = os.path.splitext(p)
 	if(type_file[1] == '.json'):
 		file_play.append(p)
+
+	elif(type_file[1] == '.ogg'):
+		song_player.append(p)
+		song_player_name.append(type_file[0])
+
 file_choose = file_play[1] #此处可手动更改铺面
 with open(file_choose,'r',encoding = 'utf-8') as file:
 	get_content = js.load(file)
 bpm = get_content['time'][0]['bpm'] #提取bpm信息
 note = get_content['note'] #提取note信息
 #
+
+title_song = get_content['meta']['song']['title']
+for i in range(0,len(song_player),1):
+	if(song_player_name[i] == title_song):
+		pg.mixer.music.load(song_player[i]) 
+		break
+
 screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
 size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
 screen = pg.display.set_mode(screen_size[size_select])
@@ -222,9 +239,18 @@ column_positions = [
 ]
 keyboard_map_use = [pg.K_a, pg.K_s, pg.K_k, pg.K_l]
 
+first_note_beat = note[0]['beat']  # 获取第一个note的拍数信息
+first_note_beat_value = first_note_beat[0] + first_note_beat[1]/first_note_beat[2]
+# 转换为时间
+bar_delta = 60.0/bpm * 4  # 一小节时长
+first_note_appear_time = first_note_beat_value/4 * bar_delta  # note出现的时间
+# 计算到达判定线的时间
+arrival_time = first_note_appear_time + s_height/fall_speed
+
 clock = pg.time.Clock()	#计时器
 isRunning = True
 start_time = pg.time.get_ticks()/1000.0
+music_play_flag = False
 
 while isRunning:
 	for ev in pg.event.get():
@@ -242,6 +268,9 @@ while isRunning:
 				break
 		if(ev.type == pg.KEYDOWN):
 			note_keyboard_judge(ev.key,note_current,rect_note_current,start_time,fall_speed,screen,rank_level_judge)
+	if(pg.time.get_ticks()/1000-start_time >= arrival_time and not music_play_flag):
+		pg.mixer.music.play()
+		music_play_flag = True
 	screen.blit(background, (0, 0))
     
     # 绘制判定线
