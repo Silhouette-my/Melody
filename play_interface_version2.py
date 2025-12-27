@@ -26,13 +26,13 @@ def note_time_initialize(note_storage,note,screen):
 		note_storage[note[i]['column']].append(note_appear_time)
 #
 
-def first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta):
+def first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta,offset):
 	first_note_beat = note[0]['beat']  # 获取第一个note的拍数信息
-	first_note_beat_value = first_note_beat[0] + first_note_beat[1]/first_note_beat[2]
+	first_note_beat_value = first_note_beat[1]/first_note_beat[2]
 	# 转换为时间
 	first_note_appear_time = first_note_beat_value * beat_delta  # note出现的时间
 	# 计算到达判定线的时间
-	arrival_time = first_note_appear_time + s_height/fall_speed
+	arrival_time = first_note_appear_time + (s_height-100)/fall_speed + offset/1000
 	return arrival_time
 #
 
@@ -96,9 +96,10 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 			elif(rect_note.y > s_height):
 				del note_current[i][j]
 				del rect_note_current[i][j]
-				#list_debug_check(note_current)
-				#list_debug_check(rect_note_storage)
 #
+
+#def note_keyboard_judge():
+
 
 note_storage = list()
 list_space_initialize(note_storage,4)
@@ -113,6 +114,7 @@ list_space_initialize(rect_note_current,4)
 note_read_sp = [0,0,0,0]
 rank_level_judge = [0,0,0,0]
 fall_speed = 650
+offset = 300
 
 pg.init() #pygame初始化
 
@@ -169,7 +171,7 @@ column_note_positions = [ #列的位置
 ]
 keyboard_map_use = [pg.K_a, pg.K_s, pg.K_k, pg.K_l]
 
-first_arrival_time = first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta)
+first_arrival_time = first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta,offset)
 note_time_initialize(note_storage,note,screen)
 note_rect_initialize(note,rect_note_storage,screen,column_note_positions,beat_delta,fall_speed)
 
@@ -183,11 +185,6 @@ while isRunning:
 		if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
 			isRunning = False
 			break
-		#if(sp == -1):
-			#if(ev.type == pg.KEYDOWN):
-				#if(ev.key == pg.K_ESCAPE):
-					#isRunning = False
-					#break
 		if(ev.type == pg.KEYDOWN):
 			if(ev.key == pg.K_ESCAPE):
 				isRunning = False
