@@ -88,7 +88,7 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 			note_time = note_current[i][j]
 			if(rect_note.y <= s_height):
 				time_diff = note_time - current_time
-				pg.draw.rect(screen, (30, 30, 30), rect_note, 0) #用黑色矩形覆盖上一次显示的白色矩形
+				pg.draw.rect(screen, (30, 30, 30), rect_note, 0) #用背景色色矩形覆盖上一次显示的白色矩形
 				rect_note.y = (s_height-100)-rect_note.height-time_diff*fall_speed
 				if(time_diff >= -s_height/fall_speed): #只渲染会出现在屏幕里的note,且在其出现前就预渲染好(避免长条渲染出错)
 					pg.draw.rect(screen,'white',rect_note,0)
@@ -98,8 +98,67 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 				del rect_note_current[i][j]
 #
 
-#def note_keyboard_judge():
+def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,rank_level_judge,combo):
+	if(judge_time_diff <= 50):
+		rank_level_judge[0] += 1
+		combo += 1
+		pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
+		#text_draw('prefect',screen)
+	elif(judge_time_diff <= 80):
+		rank_level_judge[1] += 1
+		combo += 1
+		pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
+		#text_draw('good',screen)
+	elif(judge_time_diff <= 120):
+		rank_level_judge[2] += 1
+		combo = 0
+		pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
+		#text_draw('bad',screen)
+	else:
+		rank_level_judge[3] += 1
+		combo = 0
+		pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
+		#text_draw('miss',screen)
+#
 
+def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,start_time,fall_speed,rank_level_judge,combo):
+	mapping_table = {pg.K_a: 0,
+        			 pg.K_s: 1,
+        			 pg.K_k: 2,
+        			 pg.K_l: 3}
+	if keyboard_input in mapping_table:
+		key_use = mapping_table[keyboard_input]
+	else:
+		return
+
+	s_height = pg.Surface.get_height(screen)
+	rank_time_diff = [50,80,120,200]
+	current_time = pg.time.get_ticks()/1000.0-start_time	
+
+	if(keyboard_statement == 1):
+		if(column_lock_clock[key_use] == 0):
+			if(note_duration_time[key_use]-current_time >= 0.1):
+				combo = 0
+			column_lock_clock[key_use] = 0
+		column_statement[key_use] = 1
+		note_duration_time[key_use] = 0
+	elif(keyboard_statement == 0):
+		if(rect_note_current[key_use][0].height == 10):
+			judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
+			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,rank_level_judge,combo)
+			del note_current[key_use][0]
+			del rect_note_current[key_use][0]
+			column_statement[key_use] = 0
+		elif(rect_note_current[key_use][0].height > 10):
+			judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
+			note_duration_time[key_use] = rect_note_current[key_use][0].height/fall_speed
+			column_lock_clock[key_use] = current_time
+			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,rank_level_judge,combo)
+#
+
+def long_note_height_change():
+	if
+#
 
 note_storage = list()
 list_space_initialize(note_storage,4)
@@ -112,7 +171,11 @@ rect_note_current = list()
 list_space_initialize(rect_note_current,4)
 
 note_read_sp = [0,0,0,0]
+column_statement = [0,0,0,0]
+column_lock_clock = [0,0,0,0]
+note_duration_time = [0,0,0,0]
 rank_level_judge = [0,0,0,0]
+combo = 0
 fall_speed = 650
 offset = 300
 
@@ -189,8 +252,10 @@ while isRunning:
 			if(ev.key == pg.K_ESCAPE):
 				isRunning = False
 				break
-		#if(ev.type == pg.KEYDOWN):
-			#note_keyboard_judge(ev.key,note_current,rect_note_storage,start_time,fall_speed,screen,rank_level_judge)
+		if(ev.type == pg.KEYDOWN):
+			note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,start_time,fall_speed,rank_level_judge,combo)
+		if(ev.type == pg.KEYUP):
+			note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,start_time,fall_speed,rank_level_judge,combo)
 	if(pg.time.get_ticks()/1000-start_time >= first_arrival_time and not music_play_flag):
 		pg.mixer.music.play()
 		music_play_flag = True
