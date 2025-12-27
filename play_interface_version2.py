@@ -77,7 +77,7 @@ def note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rec
 				break
 #
 
-def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,screen,fall_speed):
+def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,note_duration_time,screen,fall_speed):
 	s_height = pg.Surface.get_height(screen)
 	current_time = pg.time.get_ticks()/1000.0-start_time
 	note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,current_time,s_height,fall_speed)
@@ -89,7 +89,10 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 			if(rect_note.y <= s_height):
 				time_diff = note_time - current_time
 				pg.draw.rect(screen, (30, 30, 30), rect_note, 0) #用背景色色矩形覆盖上一次显示的白色矩形
-				rect_note.y = (s_height-100)-rect_note.height-time_diff*fall_speed
+				if(rect_note.height > 10 and note_duration_time[i] != 0):
+					rect_note.y = (s_height-100)-rect_note.height
+				else:
+					rect_note.y = (s_height-100)-rect_note.height-time_diff*fall_speed
 				if(time_diff >= -s_height/fall_speed): #只渲染会出现在屏幕里的note,且在其出现前就预渲染好(避免长条渲染出错)
 					pg.draw.rect(screen,'white',rect_note,0)
 				j += 1
@@ -136,13 +139,19 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 	current_time = pg.time.get_ticks()/1000.0-start_time	
 
 	if(keyboard_statement == 1):
-		if(column_lock_clock[key_use] == 0):
+		if(column_lock_clock[key_use] != 0):
 			if(note_duration_time[key_use]-current_time >= 0.1):
 				combo = 0
+			del note_current[key_use][0]
+			del rect_note_current[key_use][0]
 			column_lock_clock[key_use] = 0
 		column_statement[key_use] = 1
 		note_duration_time[key_use] = 0
 	elif(keyboard_statement == 0):
+		if(not len(rect_note_current[key_use])):
+			return
+		if(rect_note_current[key_use][0].y+rect_note_current[key_use][0].height <= s_height/2):
+			return
 		if(rect_note_current[key_use][0].height == 10):
 			judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
 			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,rank_level_judge,combo)
@@ -156,8 +165,16 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,rank_level_judge,combo)
 #
 
-def long_note_height_change():
-	if
+def long_note_height_change(key_use,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,start_time,fall_speed):
+	current_time = pg.time.get_ticks()/1000.0-start_time
+	if(rect_note_current[key_use][0].height > 10):
+		press_time = current_time-column_lock_clock[key_use]
+		rect_note_current[key_use][0].height -= press_time*fall_speed
+	elif(rect_note_current[key_use][0].height <= 10):
+		note_duration_time[key_use] = 0
+		column_lock_clock[key_use] = 0
+		del note_current[key_use][0]
+		del rect_note_current[key_use][0]
 #
 
 note_storage = list()
@@ -267,7 +284,12 @@ while isRunning:
     
     # 绘制主要的判定线（note应该到达的位置）
 	pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
-	note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,screen,fall_speed)
+
+	for i in range(0,4):
+		if(column_lock_clock[i]):
+			long_note_height_change(i,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,start_time,fall_speed)
+	note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,note_duration_time,screen,fall_speed)
+
 	pg.display.update()
 	clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
 
