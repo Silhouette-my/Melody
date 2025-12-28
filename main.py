@@ -15,6 +15,7 @@ STATE_MENU = "menu"
 STATE_SELECT = "select"
 STATE_PLAY = "play"
 STATE_RESULT = "result"
+STATE_SETTING= "setting"
 
 def main():
     state = STATE_MENU
