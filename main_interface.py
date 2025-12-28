@@ -4,17 +4,16 @@ import numpy as py
 import pygame as pg
 
 #绘制主界面的start,settings,quit
+MENU_ITEMS = ["start", "settings", "quit"]
+
 def screen_interface(screen,font):
-	start = "start"
-	settings = "settings"
-	quit = "quit"
-	text = [start,settings,quit]
+	text = MENU_ITEMS
 	text_image = list()
 	text_rect = list()
 	s_width = pg.Surface.get_width(screen)
 	s_height = pg.Surface.get_height(screen)
 	mid_pos = (s_width//2,s_height//2)
-	for i in range(0,3,1):
+	for i in range(0,len(text),1):
 		text_image.append(font.render(text[i],True,'white'))
 		text_rect.append(text_image[i].get_rect())
 		t_height = text_rect[i].height
