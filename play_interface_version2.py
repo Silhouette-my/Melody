@@ -77,7 +77,7 @@ def note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rec
 				break
 #
 
-def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed):
+def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed):
 	s_height = pg.Surface.get_height(screen)
 	current_time = pg.time.get_ticks()/1000.0-start_time
 	note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,current_time,s_height,fall_speed)
@@ -91,7 +91,7 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 				pg.draw.rect(screen, (30, 30, 30), rect_note, 0) #用背景色色矩形覆盖上一次显示的白色矩形
 				if(rect_note.height > 10):
 					if(note_duration_time[i] > 0):
-						long_note_height_change(i,j,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,start_time,fall_speed)
+						long_note_height_change(i,j,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,start_time,fall_speed)
 					else:
 						rect_note.y = (s_height-100)-rect_note.height-time_diff*fall_speed
 				else:
@@ -127,7 +127,7 @@ def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,cur
 		text_draw('miss',screen,lock_time,current_time)
 #
 
-def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,start_time,lock_time,fall_speed,rank_level_judge,combo):
+def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_times,fall_speed,rank_level_judge,combo):
 	mapping_table = {pg.K_a: 0,
         			 pg.K_s: 1,
         			 pg.K_k: 2,
@@ -141,16 +141,7 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 	rank_time_diff = [50,80,120,200]
 	current_time = pg.time.get_ticks()/1000.0-start_time	
 
-	if(keyboard_statement == 1):
-		if(column_lock_clock[key_use] != 0):
-			if(note_duration_time[key_use]-current_time >= 0.1):
-				combo = 0
-			del note_current[key_use][0]
-			del rect_note_current[key_use][0]
-			column_lock_clock[key_use] = 0
-		column_statement[key_use] = 1
-		note_duration_time[key_use] = 0
-	elif(keyboard_statement == 0):
+	if(keyboard_statement == 0):
 		if(not len(rect_note_current[key_use])):
 			return
 		if(rect_note_current[key_use][0].y+rect_note_current[key_use][0].height <= s_height/2):
@@ -158,26 +149,38 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 		if(rect_note_current[key_use][0].height == 10):
 			judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
 			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge,combo)
-			del note_current[key_use][0]
-			del rect_note_current[key_use][0]
+			if len(note_current[key_use]) > 0:
+				del note_current[key_use][0]
+			if len(rect_note_current[key_use]) > 0:
+				del rect_note_current[key_use][0]
 			column_statement[key_use] = 0
 		elif(rect_note_current[key_use][0].height > 10):
 			judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
 			note_duration_time[key_use] = rect_note_current[key_use][0].height/fall_speed
 			column_lock_clock[key_use] = current_time
 			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge,combo)
+	elif(keyboard_statement == 1):
+		if(column_lock_clock[key_use] != 0):
+			if(note_duration_time[key_use]-current_time > 0.1):
+				combo = 0
+			if(len(note_current[key_use]) > 0):
+				del note_current[key_use][0]
+			if(len(rect_note_current[key_use]) > 0):
+				del rect_note_current[key_use][0]
+			note_duration_time[key_use] = 0
+			column_lock_clock[key_use] = 0
+		column_statement[key_use] = 1
 #
 
-def long_note_height_change(key_use,label,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,start_time,fall_speed):
-	current_time = pg.time.get_ticks()/1000.0-start_time
+def long_note_height_change(key_use,label,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,start_time,fall_speed):
+	rect = pg.Rect(rect_note_current[key_use][label].x,rect_note_current[key_use][label].y+rect_note_current[key_use][label].height,80,10)
+	current_time = pg.time.get_ticks()/1000.0 - start_time
 	if(rect_note_current[key_use][label].height > 10):
-		press_time = current_time-column_lock_clock[key_use]
-		origin_buttom = rect_note_current[key_use][label].y+rect_note_current[key_use][label].height
-		height_reduction = press_time * fall_speed
-		new_height = max(10, rect_note_current[key_use][label].height - height_reduction)
-		rect_note_current[key_use][label].height = new_height
-		rect_note_current[key_use][label].y = origin_buttom-rect_note_current[key_use][label].height
+		press_time = current_time - column_lock_clock[key_use]
+		rect_note_current[key_use][label].y += press_time*fall_speed
+		rect_note_current[key_use][label].height = max(10,rect.y-rect_note_current[key_use][label].y)
 		column_lock_clock[key_use] = current_time
+		column_statement[key_use] = 1
 	elif(rect_note_current[key_use][label].height <= 10):
 		note_duration_time[key_use] = 0
 		column_lock_clock[key_use] = 0
@@ -215,12 +218,15 @@ note_current = list()
 list_space_initialize(note_current,4)
 rect_note_current = list()
 list_space_initialize(rect_note_current,4)
+rect_upper_note_current = list()
+list_space_initialize(rect_upper_note_current,4)
 
 note_read_sp = [0,0,0,0]
 column_statement = [0,0,0,0]
 column_lock_clock = [0,0,0,0]
 note_duration_time = [0,0,0,0]
 rank_level_judge = [0,0,0,0]
+long_note_original_info = [None, None, None, None]
 lock_time = 0
 combo = 0
 fall_speed = 650
@@ -300,9 +306,9 @@ while isRunning:
 				isRunning = False
 				break
 		if(ev.type == pg.KEYDOWN):
-			note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
+			note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
 		if(ev.type == pg.KEYUP):
-			note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
+			note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
 	if(pg.time.get_ticks()/1000-start_time >= first_arrival_time and not music_play_flag):
 		pg.mixer.music.play()
 		music_play_flag = True
@@ -315,7 +321,7 @@ while isRunning:
     # 绘制主要的判定线（note应该到达的位置）
 	pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
 
-	note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
+	note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
 
 	pg.display.update()
 	clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
