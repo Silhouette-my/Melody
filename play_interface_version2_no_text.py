@@ -26,6 +26,17 @@ def rank_check(rank_level_judge,last_time,start_time):
 		return last_time
 #
 
+def end_judge(note,note_read_sp):
+	length_sum = len(note)-1
+	use_sum = 0
+	for i in range(0,4,1):
+		use_sum += note_read_sp[i]
+	if(use_sum == length_sum):
+		return 1
+	else:
+		return 0
+#
+
 def list_space_initialize(target_list,dimension):
 	for i in range(0,dimension,1):
 		temp = list()
@@ -333,7 +344,7 @@ for p in path:
 	elif(file[1] == '.ogg'):
 		song_player.append(p)
 		song_player_name.append(file[0])
-file_choose = file_play[0] #此处可手动更改铺面
+file_choose = file_play[1] #此处可手动更改铺面
 with open(file_choose,'r',encoding = 'utf-8') as file:
 	get_content = js.load(file)
 bpm = get_content['time'][0]['bpm'] #提取bpm信息
@@ -378,6 +389,7 @@ note_rect_initialize(note,rect_note_storage,screen,column_note_positions,beat_de
 clock = pg.time.Clock()	#计时器
 isRunning = True
 music_play_flag = False
+isDoing = True
 start_time = pg.time.get_ticks()/1000.0
 
 while isRunning:
@@ -407,7 +419,12 @@ while isRunning:
 
 	note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
 	text_draw(screen)
-	last_time = rank_check(rank_level_judge,last_time,start_time)
+
+	if(not(end_judge(note,note_read_sp) and len(note_current))):
+		last_time = rank_check(rank_level_judge,last_time,start_time)
+	elif(isDoing == True):
+		print(len(note)-1)
+		isDoing = False
 
 	pg.display.update()
 	clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
