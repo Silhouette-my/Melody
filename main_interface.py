@@ -37,6 +37,7 @@ def button_border_draw(screen,text_rect,select_flag):
 def button_border_clear(screen,last_rect):
 	pg.draw.rect(screen,'black',last_rect,1)
 
+def run_menu(screen)
 pg.init()
 screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
 size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
@@ -56,7 +57,7 @@ while isRunning:
 	for ev in pg.event.get():
 		if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
 			isRunning = False
-			break
+			return “
 		elif(ev.type == pg.KEYDOWN):
 			if(ev.key == pg.K_DOWN):
 				if(button_select_flag < 2):

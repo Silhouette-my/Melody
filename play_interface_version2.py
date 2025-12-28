@@ -236,7 +236,7 @@ def pause_state(screen, font):
                         pg.quit(); sys.exit()
         # 绘制半透明遮罩
         overlay = pg.Surface((s_width, s_height))
-        overlay.set_alpha(120)  # 可以调节透明度，120 比 150 更柔和
+        overlay.set_alpha(80)  # 可以调节透明度，120 比 150 更柔和
         overlay.fill((30, 30, 30))  # 深灰色遮罩，比纯黑更舒服
         screen.blit(overlay, (0, 0))
 
