@@ -439,6 +439,7 @@ def run_game(file_path=None):
             last_time = rank_check(rank_level_judge,last_time,start_time)
         elif(isDoing == True):
             print(len(note)-1)
+            combo = 0
             isDoing = False
 
         pg.display.update()
