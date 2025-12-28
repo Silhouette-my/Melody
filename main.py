@@ -16,6 +16,7 @@ STATE_MENU = "menu"
 STATE_SELECT = "select"
 STATE_PLAY = "play"
 STATE_RESULT = "result"
+STATE_SETTING= "setting"
 
 # 屏幕参数
 screen = pygame.display.set_mode((800, 600))
@@ -29,6 +30,7 @@ def main():
             # 调用主菜单界面       
             text_rect = main_interface.screen_interface(screen, font)
             last_rect = main_interface.button_border_draw(screen, text_rect, 0)
+            selected_index = 0
 
             running = True
             while running:
@@ -42,8 +44,14 @@ def main():
                             running = False
                         # 上下键移动菜单
                         elif ev.key == pygame.K_DOWN or ev.key == pygame.K_UP:
-                            pass
-                            # TODO
+                            if ev.key == pygame.K_DOWN and selected_index < len(text_rect) - 1:
+                                main_interface.button_border_clear(screen, last_rect)
+                                selected_index += 1
+                                last_rect = main_interface.button_border_draw(screen, text_rect, selected_index)
+                            elif ev.key == pygame.K_UP and selected_index > 0:
+                                main_interface.button_border_clear(screen, last_rect)
+                                selected_index -= 1
+                                last_rect = main_interface.button_border_draw(screen, text_rect, selected_index)
                 pygame.display.update()
 
         elif state == STATE_SELECT:
