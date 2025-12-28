@@ -91,7 +91,15 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 				pg.draw.rect(screen, (30, 30, 30), rect_note, 0) #用背景色色矩形覆盖上一次显示的白色矩形
 				if(rect_note.height > 10):
 					if(note_duration_time[i] > 0):
-						long_note_height_change(i,j,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,start_time,fall_speed)
+						long_note_ended = long_note_height_change(i,j,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,start_time,fall_speed)
+						if long_note_ended:
+                            # 长条结束，从队列中移除
+							del note_current[i][j]
+							del rect_note_current[i][j]
+							note_duration_time[i] = 0
+							column_lock_clock[i] = 0
+							column_statement[i] = 1
+							continue  # 跳过后续渲染和j的增加
 					else:
 						rect_note.y = (s_height-100)-rect_note.height-time_diff*fall_speed
 				else:
@@ -100,8 +108,18 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 					pg.draw.rect(screen,'white',rect_note,0)
 				j += 1
 			elif(rect_note.y > s_height):
+                # 音符已过判定线，检查是否是长条
+				if(rect_note.height > 10 and note_duration_time[i] > 0):
+                    # 长条未完成，判定为miss
+					rank_level_judge[3] += 1
+					combo = 0
 				del note_current[i][j]
 				del rect_note_current[i][j]
+                # 如果删除的是长条，重置相关状态
+				if(rect_note.height > 10):
+					note_duration_time[i] = 0
+					column_lock_clock[i] = 0
+					column_statement[i] = 1
 #
 
 def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge,combo):
@@ -149,9 +167,9 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 		if(rect_note_current[key_use][0].height == 10):
 			judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
 			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge,combo)
-			if len(note_current[key_use]) > 0:
+			if(len(note_current[key_use]) > 0):
 				del note_current[key_use][0]
-			if len(rect_note_current[key_use]) > 0:
+			if(len(rect_note_current[key_use]) > 0):
 				del rect_note_current[key_use][0]
 			column_statement[key_use] = 0
 		elif(rect_note_current[key_use][0].height > 10):
@@ -161,31 +179,43 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge,combo)
 	elif(keyboard_statement == 1):
 		if(column_lock_clock[key_use] != 0):
-			if(note_duration_time[key_use]-current_time > 0.1):
-				combo = 0
-			if(len(note_current[key_use]) > 0):
-				del note_current[key_use][0]
-			if(len(rect_note_current[key_use]) > 0):
-				del rect_note_current[key_use][0]
-			note_duration_time[key_use] = 0
-			column_lock_clock[key_use] = 0
-		column_statement[key_use] = 1
+			if(len(rect_note_current[key_use]) > 0 and rect_note_current[key_use][0].height > 10):
+				if(note_duration_time[key_use]-current_time > 0.1):
+					combo = 0
+				if(len(note_current[key_use]) > 0):
+					del note_current[key_use][0]
+				if(len(rect_note_current[key_use]) > 0):
+					del rect_note_current[key_use][0]
+				note_duration_time[key_use] = 0
+				column_lock_clock[key_use] = 0
+				column_statement[key_use] = 1
 #
 
 def long_note_height_change(key_use,label,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,start_time,fall_speed):
-	rect = pg.Rect(rect_note_current[key_use][label].x,rect_note_current[key_use][label].y+rect_note_current[key_use][label].height,80,10)
+	#rect = pg.Rect(rect_note_current[key_use][label].x,rect_note_current[key_use][label].y+rect_note_current[key_use][label].height,80,10)
 	current_time = pg.time.get_ticks()/1000.0 - start_time
 	if(rect_note_current[key_use][label].height > 10):
 		press_time = current_time - column_lock_clock[key_use]
-		rect_note_current[key_use][label].y += press_time*fall_speed
-		rect_note_current[key_use][label].height = max(10,rect.y-rect_note_current[key_use][label].y)
+		height_reduced = press_time * fall_speed
+		original_height = rect_note_current[key_use][label].height
+		#rect_note_current[key_use][label].y += press_time*fall_speed
+		#rect_note_current[key_use][label].height = max(10,rect.y-rect_note_current[key_use][label].y)
+		rect_note_current[key_use][label].height = max(10, rect_note_current[key_use][label].height - height_reduced)
+		height_change = original_height - rect_note_current[key_use][label].height
+		rect_note_current[key_use][label].y += height_change
+		for j in range(label + 1, len(rect_note_current[key_use])):
+			rect_note_current[key_use][j].y += height_change
+        
 		column_lock_clock[key_use] = current_time
 		column_statement[key_use] = 1
-	elif(rect_note_current[key_use][label].height <= 10):
-		note_duration_time[key_use] = 0
-		column_lock_clock[key_use] = 0
-		del note_current[key_use][label]
-		del rect_note_current[key_use][label]
+        # 检查长条是否结束（高度<=10）
+		if rect_note_current[key_use][label].height <= 10:
+            # 长条结束，准备清理
+			return True
+	elif rect_note_current[key_use][label].height <= 10:
+        # 长条已经结束
+		return True
+	return False
 #
 
 def text_draw(judge,screen,lock_time,current_time):
@@ -226,11 +256,10 @@ column_statement = [0,0,0,0]
 column_lock_clock = [0,0,0,0]
 note_duration_time = [0,0,0,0]
 rank_level_judge = [0,0,0,0]
-long_note_original_info = [None, None, None, None]
 lock_time = 0
 combo = 0
 fall_speed = 650
-offset = -1000
+offset = -800
 
 pg.init() #pygame初始化
 
