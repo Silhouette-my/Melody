@@ -6,6 +6,7 @@ import os
 # 引入你已有的模块
 import main_interface       # 主菜单
 import song_selection       # 选曲界面
+import setting              # 设置
 import play_interface_version2 as play  # 游戏逻辑（推荐用 version2）
 
 # ======================
@@ -37,8 +38,14 @@ def main():
                         return
                     elif ev.type == pygame.KEYDOWN:
                         if ev.key == pygame.K_RETURN:  # Enter 进入选曲
-                            state = STATE_SELECT
-                            running = False
+                            if selected_index == 0:
+                                state = STATE_SELECT
+                                running = False
+                            elif selected_index == 1:
+                                state = STATE_SETTING
+                                running = False
+                            elif selected_index == 2:
+                                return
                         # 上下键移动菜单
                         elif ev.key == pygame.K_DOWN or ev.key == pygame.K_UP:
                             if ev.key == pygame.K_DOWN and selected_index < len(text_rect) - 1:
@@ -77,6 +84,9 @@ def main():
                 pygame.display.update()
                 clock.tick(60)
 
+        elif state == STATE_SETTING:
+            setting.run_settings()
+            state = STATE_MENU
         elif state == STATE_PLAY:
             # 调用游戏逻辑 前往 play_interface
             play.run_game(selected_song)  # 你需要在 play_interface_version2.py 里写一个 run_game(file_path)
