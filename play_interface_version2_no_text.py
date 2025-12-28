@@ -202,64 +202,11 @@ def text_draw(judge,screen,lock_time,current_time):
 	font = pg.font.SysFont(None,57)
 	alpha_value = 180
 
-<<<<<<< HEAD
-    text_image = font.render(text,True,'gray')
-    text_image.set_alpha(alpha_value)
-    text_rect = text_image.get_rect()
-    text_rect.center = (s_width/2,s_height/3)
-    screen.blit(text_image,text_rect)
-#
-
-def pause_state(screen, font):
-    clock = pg.time.Clock()
-    options = ["Continue", "Restart", "Back to Menu", "Quit Game"]
-    selected_option = 0
-    s_width, s_height = screen.get_size()
-
-    while True:
-        for ev in pg.event.get():
-            if ev.type == pg.QUIT:
-                pg.quit(); sys.exit()
-            elif ev.type == pg.KEYDOWN:
-                if ev.key == pg.K_UP:
-                    selected_option = (selected_option - 1) % len(options)
-                elif ev.key == pg.K_DOWN:
-                    selected_option = (selected_option + 1) % len(options)
-                elif ev.key == pg.K_RETURN:
-                    if options[selected_option] == "Continue":
-                        return STATE_PLAY
-                    elif options[selected_option] == "Restart":
-                        return STATE_PLAY, "restart"
-                    elif options[selected_option] == "Back to Menu":
-                        return STATE_MENU
-                    elif options[selected_option] == "Quit Game":
-                        pg.quit(); sys.exit()
-        # 绘制半透明遮罩
-        overlay = pg.Surface((s_width, s_height))
-        overlay.set_alpha(80)  # 可以调节透明度，120 比 150 更柔和
-        overlay.fill((30, 30, 30))  # 深灰色遮罩，比纯黑更舒服
-        screen.blit(overlay, (0, 0))
-
-        # 绘制菜单选项（居中）
-        menu_height = len(options) * 60
-        start_y = s_height / 2 - menu_height / 2
-
-        for i, option in enumerate(options):
-            color = (255, 255, 0) if i == selected_option else (255, 255, 255)
-            text = font.render(option, True, color)
-            rect = text.get_rect(center=(s_width / 2, start_y + i * 60))
-            screen.blit(text, rect)
-        
-        pg.display.update()
-        clock.tick(30)
-                
-=======
 	text_image = font.render(text,True,'gray')
 	text_image.set_alpha(alpha_value)
 	text_rect = text_image.get_rect()
 	text_rect.center = (s_width/2,s_height/3)
 	screen.blit(text_image,text_rect)
->>>>>>> origin
 #
 
 note_storage = list()
