@@ -3,6 +3,9 @@ import os
 import numpy as np
 import pygame as pg
 import time
+import sys
+
+font=pg.font.SysFont(None,50)
 
 def list_debug_check(target_list):
 	list_length = len(target_list)
@@ -206,6 +209,48 @@ def text_draw(judge,screen,lock_time,current_time):
 	screen.blit(text_image,text_rect)
 #
 
+def pause_state(screen, font):
+    clock = pg.time.Clock()
+    options = ["继续游戏", "重新开始", "返回主菜单", "退出游戏"]
+    selected_option = 0
+    s_width, s_height = screen.get_size()
+
+    while True:
+        for ev in pg.event.get():
+            if ev.type == pg.QUIT:
+                pg.quit(); sys.exit()
+            elif ev.type == pg.KEYDOWN:
+                if ev.key == pg.K_UP:
+                    selected_option = (selected_option - 1) % len(options)
+                elif ev.key == pg.K_DOWN:
+                    selected_option = (selected_option + 1) % len(options)
+                elif ev.key == pg.K_RETURN:
+                    if options[selected_option] == "继续游戏":
+                        return STATE_PLAY
+                    elif options[selected_option] == "重新开始":
+                        return STATE_PLAY, "restart"
+                    elif options[selected_option] == "返回主菜单":
+                        return STATE_MENU
+                    elif options[selected_option] == "退出游戏":
+                        pg.quit(); sys.exit()
+
+        # 绘制半透明遮罩
+        overlay = pg.Surface((s_width, s_height))
+        overlay.set_alpha(150)
+        overlay.fill((0, 0, 0))
+        screen.blit(overlay, (0, 0))
+
+        # 绘制菜单选项
+        for i, option in enumerate(options):
+            color = (255, 255, 0) if i == selected_option else (255, 255, 255)
+            text = font.render(option, True, color)
+            rect = text.get_rect(center=(s_width/2, s_height/2 + i*60))
+            screen.blit(text, rect)
+
+        pg.display.update()
+        clock.tick(30)
+#
+
 note_storage = list()
 list_space_initialize(note_storage,4)
 rect_note_storage = list()
@@ -290,6 +335,8 @@ isRunning = True
 music_play_flag = False
 start_time = pg.time.get_ticks()/1000.0
 
+pause = False
+
 while isRunning:
 	for ev in pg.event.get():
 		if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
@@ -297,8 +344,7 @@ while isRunning:
 			break
 		if(ev.type == pg.KEYDOWN):
 			if(ev.key == pg.K_ESCAPE):
-				isRunning = False
-				break
+				return pause_state(screen, font)
 		if(ev.type == pg.KEYDOWN):
 			note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
 		if(ev.type == pg.KEYUP):

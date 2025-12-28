@@ -2,6 +2,7 @@ import pygame
 import time
 import json
 import os
+import sys
 
 # 引入你已有的模块
 import main_interface       # 主菜单
@@ -16,15 +17,16 @@ STATE_SELECT = "select"
 STATE_PLAY = "play"
 STATE_RESULT = "result"
 
+# 屏幕参数
+screen = pygame.display.set_mode((800, 600))
+
 def main():
     state = STATE_MENU
     selected_song = None
 
     while True:
         if state == STATE_MENU:
-            # 调用主菜单界面
-            screen = pygame.display.set_mode((800, 600))
-            font = pygame.font.SysFont(None, 50)
+            # 调用主菜单界面       
             text_rect = main_interface.screen_interface(screen, font)
             last_rect = main_interface.button_border_draw(screen, text_rect, 0)
 
@@ -32,7 +34,8 @@ def main():
             while running:
                 for ev in pygame.event.get():
                     if ev.type == pygame.QUIT:
-                        return
+                        pygame.quit()
+                        sys.exit()
                     elif ev.type == pygame.KEYDOWN:
                         if ev.key == pygame.K_RETURN:  # Enter 进入选曲
                             state = STATE_SELECT
@@ -44,15 +47,15 @@ def main():
                 pygame.display.update()
 
         elif state == STATE_SELECT:
-            # 调用选曲界面
-            screen = pygame.display.set_mode((800, 600))
+            # 调用选曲界面    
             clock = pygame.time.Clock()
             title_flag = 0
             running = True
             while running:
                 for ev in pygame.event.get():
                     if ev.type == pygame.QUIT:
-                        return
+                        pygame.quit()
+                        sys.exit()
                     elif ev.type == pygame.KEYDOWN:
                         if ev.key == pygame.K_RETURN:
                             # 确认选曲
@@ -76,7 +79,6 @@ def main():
 
         elif state == STATE_RESULT:
             # 简单结果界面
-            screen = pygame.display.set_mode((800, 600))
             font = pygame.font.SysFont(None, 50)
             text = font.render("Game Over - Press Enter to return", True, 'white')
             rect = text.get_rect(center=(400,300))
@@ -86,7 +88,8 @@ def main():
             while waiting:
                 for ev in pygame.event.get():
                     if ev.type == pygame.QUIT:
-                        return
+                        pygame.quit()
+                        sys.exit()
                     elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_RETURN:
                         state = STATE_MENU
                         waiting = False
