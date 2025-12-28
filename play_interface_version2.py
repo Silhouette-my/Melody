@@ -202,7 +202,6 @@ def text_draw(judge,screen,lock_time,current_time):
 	font = pg.font.SysFont(None,57)
 	alpha_value = 180
 
-<<<<<<< HEAD
     text_image = font.render(text,True,'gray')
     text_image.set_alpha(alpha_value)
     text_rect = text_image.get_rect()
@@ -253,13 +252,6 @@ def pause_state(screen, font):
         pg.display.update()
         clock.tick(30)
                 
-=======
-	text_image = font.render(text,True,'gray')
-	text_image.set_alpha(alpha_value)
-	text_rect = text_image.get_rect()
-	text_rect.center = (s_width/2,s_height/3)
-	screen.blit(text_image,text_rect)
->>>>>>> origin
 #
 
 note_storage = list()

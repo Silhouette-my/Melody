@@ -37,45 +37,45 @@ def button_border_draw(screen,text_rect,select_flag):
 def button_border_clear(screen,last_rect):
 	pg.draw.rect(screen,'black',last_rect,1)
 
-def run_menu(screen)
-pg.init()
-screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
-size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
-button_select_flag = 0
-screen = pg.display.set_mode(screen_size[size_select])
-#初始化窗口
-#
-clock = pg.time.Clock()	#计时器
-font = pg.font.SysFont(None,50) #字体数据初始化
-text_rect = screen_interface(screen,font)
-last_rect = button_border_draw(screen,text_rect,button_select_flag)
-#要用的变量初始化
+def run_menu(screen):
+	pg.init()
+	screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
+	size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
+	button_select_flag = 0
+	screen = pg.display.set_mode(screen_size[size_select])
+	#初始化窗口
 
-isRunning = True
+	clock = pg.time.Clock()	#计时器
+	font = pg.font.SysFont(None,50) #字体数据初始化
+	text_rect = screen_interface(screen,font)
+	last_rect = button_border_draw(screen,text_rect,button_select_flag)
+	#要用的变量初始化
 
-while isRunning:
-	for ev in pg.event.get():
-		if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
-			isRunning = False
-			return “
-		elif(ev.type == pg.KEYDOWN):
-			if(ev.key == pg.K_DOWN):
-				if(button_select_flag < 2):
-					button_border_clear(screen,last_rect)
-					button_select_flag += 1
-					last_rect = button_border_draw(screen,text_rect,button_select_flag)
-				elif(button_select_flag >= 2):
-					button_select_flag = 2
-				break
-			elif(ev.key == pg.K_UP):
-				if(button_select_flag > 0):
-					button_border_clear(screen,last_rect)
-					button_select_flag -= 1
-					last_rect = button_border_draw(screen,text_rect,button_select_flag)
-				elif(button_select_flag <= 0):
-					button_select_flag = 0
-				break
-	pg.display.update() #更新屏幕
-	clock.tick(60) #两次循环间隔(等价于60帧,保证按键有不响应期)
+	isRunning = True
 
-pg.quit()
+	while isRunning:
+		for ev in pg.event.get():
+			if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
+				isRunning = False
+				return "quit"
+			elif(ev.type == pg.KEYDOWN):
+				if(ev.key == pg.K_DOWN):
+					if(button_select_flag < 2):
+						button_border_clear(screen,last_rect)
+						button_select_flag += 1
+						last_rect = button_border_draw(screen,text_rect,button_select_flag)
+					elif(button_select_flag >= 2):
+						button_select_flag = 2
+					break
+				elif(ev.key == pg.K_UP):
+					if(button_select_flag > 0):
+						button_border_clear(screen,last_rect)
+						button_select_flag -= 1
+						last_rect = button_border_draw(screen,text_rect,button_select_flag)
+					elif(button_select_flag <= 0):
+						button_select_flag = 0
+					break
+		pg.display.update() #更新屏幕
+		clock.tick(60) #两次循环间隔(等价于60帧,保证按键有不响应期)
+
+	pg.quit()
