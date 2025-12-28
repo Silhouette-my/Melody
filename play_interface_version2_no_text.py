@@ -202,179 +202,129 @@ def text_draw(judge,screen,lock_time,current_time):
 	font = pg.font.SysFont(None,57)
 	alpha_value = 180
 
-<<<<<<< HEAD
-    text_image = font.render(text,True,'gray')
-    text_image.set_alpha(alpha_value)
-    text_rect = text_image.get_rect()
-    text_rect.center = (s_width/2,s_height/3)
-    screen.blit(text_image,text_rect)
+	text_image = font.render(text,True,'gray')
+	text_image.set_alpha(alpha_value)
+	text_rect = text_image.get_rect()
+	text_rect.center = (s_width/2,s_height/3)
+	screen.blit(text_image,text_rect)
 #
 
-def pause_state(screen, font):
-    clock = pg.time.Clock()
-    options = ["Continue", "Restart", "Back to Menu", "Quit Game"]
-    selected_option = 0
-    s_width, s_height = screen.get_size()
+note_storage = list()
+list_space_initialize(note_storage,4)
+rect_note_storage = list()
+list_space_initialize(rect_note_storage,4)
 
-    while True:
-        for ev in pg.event.get():
-            if ev.type == pg.QUIT:
-                pg.quit(); sys.exit()
-            elif ev.type == pg.KEYDOWN:
-                if ev.key == pg.K_UP:
-                    selected_option = (selected_option - 1) % len(options)
-                elif ev.key == pg.K_DOWN:
-                    selected_option = (selected_option + 1) % len(options)
-                elif ev.key == pg.K_RETURN:
-                    if options[selected_option] == "Continue":
-                        return STATE_PLAY
-                    elif options[selected_option] == "Restart":
-                        return STATE_PLAY, "restart"
-                    elif options[selected_option] == "Back to Menu":
-                        return STATE_MENU
-                    elif options[selected_option] == "Quit Game":
-                        pg.quit(); sys.exit()
-        # 绘制半透明遮罩
-        overlay = pg.Surface((s_width, s_height))
-        overlay.set_alpha(80)  # 可以调节透明度，120 比 150 更柔和
-        overlay.fill((30, 30, 30))  # 深灰色遮罩，比纯黑更舒服
-        screen.blit(overlay, (0, 0))
+note_current = list()
+list_space_initialize(note_current,4)
+rect_note_current = list()
+list_space_initialize(rect_note_current,4)
+rect_upper_note_current = list()
+list_space_initialize(rect_upper_note_current,4)
 
-        # 绘制菜单选项（居中）
-        menu_height = len(options) * 60
-        start_y = s_height / 2 - menu_height / 2
+note_read_sp = [0,0,0,0]
+column_statement = [0,0,0,0]
+column_lock_clock = [0,0,0,0]
+note_duration_time = [0,0,0,0]
+rank_level_judge = [0,0,0,0]
+long_note_original_info = [None, None, None, None]
+lock_time = 0
+combo = 0
+fall_speed = 650
+offset = -1000
 
-        for i, option in enumerate(options):
-            color = (255, 255, 0) if i == selected_option else (255, 255, 255)
-            text = font.render(option, True, color)
-            rect = text.get_rect(center=(s_width / 2, start_y + i * 60))
-            screen.blit(text, rect)
-        
-        pg.display.update()
-        clock.tick(30)
-                
+pg.init() #pygame初始化
+
+#读取铺面文件所在路径
+root = os.getcwd()
+path = os.listdir(root)
+file_play = list()
+song_player = list()
+song_player_name = list()
 #
+#找到铺面文件并打开提取bpm和音符信息
+for p in path:
+	file = os.path.splitext(p)
+	if(file[1] == '.json'):
+		file_play.append(p)
+	elif(file[1] == '.ogg'):
+		song_player.append(p)
+		song_player_name.append(file[0])
+file_choose = file_play[3] #此处可手动更改铺面
+with open(file_choose,'r',encoding = 'utf-8') as file:
+	get_content = js.load(file)
+bpm = get_content['time'][0]['bpm'] #提取bpm信息
+beat_delta = 60.0/bpm # 一小节时长
+note = get_content['note'] #提取note信息
 
+title_song = get_content['meta']['song']['title']
+for i in range(0,len(song_player),1):
+	if(song_player_name[i] == title_song):
+		pg.mixer.music.load(song_player[i]) 
+		break
 
-def run_game(file_path=None):
-    global beat_delta, start_time
-    note_storage = list()
-    list_space_initialize(note_storage,4)
-    rect_note_storage = list()
-    list_space_initialize(rect_note_storage,4)
+#
+screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
+size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
+screen = pg.display.set_mode(screen_size[size_select])
+#初始化窗口
 
-    note_current = list()
-    list_space_initialize(note_current,4)
-    rect_note_current = list()
-    list_space_initialize(rect_note_current,4)
+background = pg.Surface(screen.get_size())
+background.fill((30, 30, 30))
+s_width = pg.Surface.get_width(screen)
+s_height = pg.Surface.get_height(screen)
+column_line_positions = [
+	s_width/2-3*50,
+	s_width/2-1*50,
+	s_width/2+1*50,
+	s_width/2+3*50,
+	s_width/2+5*50
+]
+column_note_positions = [ #列的位置
+	s_width/2-3*50,
+	s_width/2-1*50,
+	s_width/2+1*50,
+	s_width/2+3*50
+]
+keyboard_map_use = [pg.K_a, pg.K_s, pg.K_k, pg.K_l]
 
-    note_read_sp = [0,0,0,0]
-    column_statement = [0,0,0,0]
-    column_lock_clock = [0,0,0,0]
-    note_duration_time = [0,0,0,0]
-    rank_level_judge = [0,0,0,0]
-    lock_time = 0
-    combo = 0
-    fall_speed = 650
-    offset = -1000
+first_arrival_time = first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta,offset)
+note_time_initialize(note_storage,note,screen)
+note_rect_initialize(note,rect_note_storage,screen,column_note_positions,beat_delta,fall_speed)
 
-    pg.init() #pygame初始化
+clock = pg.time.Clock()	#计时器
+isRunning = True
+music_play_flag = False
+start_time = pg.time.get_ticks()/1000.0
 
-    #读取铺面文件所在路径
-    root = os.getcwd()
-    path = os.listdir(root)
-    file_play = list()
-    song_player = list()
-    song_player_name = list()
-    #
-    #找到铺面文件并打开提取bpm和音符信息
-    for p in path:
-        file = os.path.splitext(p)
-        if(file[1] == '.json'):
-            file_play.append(p)
-        elif(file[1] == '.ogg'):
-            song_player.append(p)
-            song_player_name.append(file[0])
-    file_choose = file_play[3] #此处可手动更改铺面
-    with open(file_choose,'r',encoding = 'utf-8') as file:
-        get_content = js.load(file)
-    bpm = get_content['time'][0]['bpm'] #提取bpm信息
-    beat_delta = 60.0/bpm # 一小节时长
-    note = get_content['note'] #提取note信息
+while isRunning:
+	for ev in pg.event.get():
+		if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
+			isRunning = False
+			break
+		if(ev.type == pg.KEYDOWN):
+			if(ev.key == pg.K_ESCAPE):
+				isRunning = False
+				break
+		if(ev.type == pg.KEYDOWN):
+			note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
+		if(ev.type == pg.KEYUP):
+			note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
+	if(pg.time.get_ticks()/1000-start_time >= first_arrival_time and not music_play_flag):
+		pg.mixer.music.play()
+		music_play_flag = True
+	screen.blit(background, (0, 0))
+    
+    # 绘制判定线
+	for pos in column_line_positions:
+		pg.draw.line(screen, (100, 100, 100), (pos-50, 0), (pos-50, s_height), 2)
+    
+    # 绘制主要的判定线（note应该到达的位置）
+	pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
 
-    title_song = get_content['meta']['song']['title']
-    for i in range(0,len(song_player),1):
-        if(song_player_name[i] == title_song):
-            pg.mixer.music.load(song_player[i]) 
-            break
+	note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
 
-    #
-    screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
-    size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
-    screen = pg.display.set_mode(screen_size[size_select])
-    #初始化窗口
+	pg.display.update()
+	clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
 
-    background = pg.Surface(screen.get_size())
-    background.fill((30, 30, 30))
-    s_width = pg.Surface.get_width(screen)
-    s_height = pg.Surface.get_height(screen)
-    column_line_positions = [
-        s_width/2-3*50,
-        s_width/2-1*50,
-        s_width/2+1*50,
-        s_width/2+3*50,
-        s_width/2+5*50
-    ]
-    column_note_positions = [ #列的位置
-        s_width/2-3*50,
-        s_width/2-1*50,
-        s_width/2+1*50,
-        s_width/2+3*50
-    ]
-    keyboard_map_use = [pg.K_a, pg.K_s, pg.K_k, pg.K_l]
-
-    first_arrival_time = first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta,offset)
-    note_time_initialize(note_storage,note,screen)
-    note_rect_initialize(note,rect_note_storage,screen,column_note_positions,beat_delta,fall_speed)
-
-    clock = pg.time.Clock()	#计时器
-    isRunning = True
-    music_play_flag = False
-    start_time = pg.time.get_ticks()/1000.0
-
-    pause = False
-
-    while isRunning:
-        for ev in pg.event.get():
-            if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
-                isRunning = False
-                break
-            if(ev.type == pg.KEYDOWN):
-                if(ev.key == pg.K_ESCAPE):
-                    pause_state(screen, font)
-            if(ev.type == pg.KEYDOWN):
-                note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
-            if(ev.type == pg.KEYUP):
-                note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
-        if(pg.time.get_ticks()/1000-start_time >= first_arrival_time and not music_play_flag):
-            pg.mixer.music.play()
-            music_play_flag = True
-        screen.blit(background, (0, 0))
-        
-        # 绘制判定线
-        for pos in column_line_positions:
-            pg.draw.line(screen, (100, 100, 100), (pos-50, 0), (pos-50, s_height), 2)
-        
-        # 绘制主要的判定线（note应该到达的位置）
-        pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
-
-        note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
-
-        pg.display.update()
-        clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
-
-    pg.quit()
-    #主程序
-
-if __name__ == "__main__":
-    run_game()
+pg.quit()
+#主程序
