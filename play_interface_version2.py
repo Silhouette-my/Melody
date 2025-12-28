@@ -4,6 +4,9 @@ import numpy as np
 import pygame as pg
 import time
 
+STATE_PLAY = "play"
+STATE_MENU = "menu"
+
 def list_debug_check(target_list):
 	list_length = len(target_list)
 	for i in range(0,list_length,1):
@@ -202,12 +205,11 @@ def text_draw(judge,screen,lock_time,current_time):
 	font = pg.font.SysFont(None,57)
 	alpha_value = 180
 
-<<<<<<< HEAD
-    text_image = font.render(text,True,'gray')
-    text_image.set_alpha(alpha_value)
-    text_rect = text_image.get_rect()
-    text_rect.center = (s_width/2,s_height/3)
-    screen.blit(text_image,text_rect)
+	text_image = font.render(text,True,'gray')
+	text_image.set_alpha(alpha_value)
+	text_rect = text_image.get_rect()
+	text_rect.center = (s_width/2,s_height/3)
+	screen.blit(text_image,text_rect)
 #
 
 def pause_state(screen, font):
@@ -295,7 +297,12 @@ def run_game(file_path=None):
         elif(file[1] == '.ogg'):
             song_player.append(p)
             song_player_name.append(file[0])
-    file_choose = file_play[3] #此处可手动更改铺面
+    if file_path is not None:
+        file_choose = file_path
+    elif file_play:
+        file_choose = file_play[0]
+    else:
+        return
     with open(file_choose,'r',encoding = 'utf-8') as file:
         get_content = js.load(file)
     bpm = get_content['time'][0]['bpm'] #提取bpm信息
