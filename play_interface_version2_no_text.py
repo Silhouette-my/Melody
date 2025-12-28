@@ -4,11 +4,26 @@ import numpy as np
 import pygame as pg
 import time
 
+# 添加全局变量用于文字显示
+display_text = None
+text_display_start_time = 0
+TEXT_DISPLAY_DURATION = 0.2  # 文字显示0.5秒
+TEXT_WINDOW_PERIOD = 0.05     # 文字窗口期，窗口期内不改变显示的文字
+
 def list_debug_check(target_list):
 	list_length = len(target_list)
 	for i in range(0,list_length,1):
 		print("<",target_list[i],">"," ")
 		print("\n")
+#
+
+def rank_check(rank_level_judge,last_time,start_time):
+	current_time = pg.time.get_ticks()/1000 - start_time
+	if(current_time - last_time >= 0.5):
+		print(rank_level_judge)
+		return current_time
+	else:
+		return last_time
 #
 
 def list_space_initialize(target_list,dimension):
@@ -78,6 +93,7 @@ def note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rec
 #
 
 def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed):
+	global display_text, text_display_start_time
 	s_height = pg.Surface.get_height(screen)
 	current_time = pg.time.get_ticks()/1000.0-start_time
 	note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,current_time,s_height,fall_speed)
@@ -108,11 +124,18 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 					pg.draw.rect(screen,'white',rect_note,0)
 				j += 1
 			elif(rect_note.y > s_height):
+				if(rect_note.height == 10):
+					rank_level_judge[3] += 1
+					combo = 0
+					display_text = 'miss'
+					text_display_start_time = current_time					
                 # 音符已过判定线，检查是否是长条
-				if(rect_note.height > 10 and note_duration_time[i] > 0):
+				elif(rect_note.height > 10 and note_duration_time[i] > 0):
                     # 长条未完成，判定为miss
 					rank_level_judge[3] += 1
 					combo = 0
+					display_text = 'miss'
+					text_display_start_time = current_time
 				del note_current[i][j]
 				del rect_note_current[i][j]
                 # 如果删除的是长条，重置相关状态
@@ -123,26 +146,35 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 #
 
 def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge,combo):
-	if(judge_time_diff <= 50):
+	global display_text, text_display_start_time
+	# 检查是否在窗口期内，如果是则保持原有文字不改变
+	current_display_time = pg.time.get_ticks()/1000.0 - start_time
+	if display_text is not None and (current_display_time - text_display_start_time) < TEXT_WINDOW_PERIOD:
+		return  # 窗口期内不改变文字
+	if(judge_time_diff <= 50/1000):
 		rank_level_judge[0] += 1
 		combo += 1
 		pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
-		text_draw('prefect',screen,lock_time,current_time)
-	elif(judge_time_diff <= 80):
+		display_text = 'perfect'
+		text_display_start_time = current_display_time
+	elif(judge_time_diff <= 80/1000):
 		rank_level_judge[1] += 1
 		combo += 1
 		pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
-		text_draw('good',screen,lock_time,current_time)
-	elif(judge_time_diff <= 120):
+		display_text = 'good'
+		text_display_start_time = current_display_time
+	elif(judge_time_diff <= 120/1000):
 		rank_level_judge[2] += 1
 		combo = 0
 		pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
-		text_draw('bad',screen,lock_time,current_time)
+		display_text = 'bad'
+		text_display_start_time = current_display_time
 	else:
 		rank_level_judge[3] += 1
 		combo = 0
 		pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
-		text_draw('miss',screen,lock_time,current_time)
+		display_text = 'miss'
+		text_display_start_time = current_display_time
 #
 
 def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_times,fall_speed,rank_level_judge,combo):
@@ -218,21 +250,43 @@ def long_note_height_change(key_use,label,screen,column_statement,column_lock_cl
 	return False
 #
 
-def text_draw(judge,screen,lock_time,current_time):
-	if(lock_time == 0):
-		lock_time = current_time
-	elif(lock_time != 0):
-		if(current_time - lock_time <= 1/24):
-			return
-		elif(current_time - lock_time > 1/24):
-			lock_time = 0
+def text_draw(screen):
+	global display_text, text_display_start_time
+	if display_text is None:
+		return
+        
+	current_display_time = pg.time.get_ticks()/1000.0 - start_time
+    
+    # 检查是否超过显示时间
+	if current_display_time - text_display_start_time > TEXT_DISPLAY_DURATION:
+		display_text = None
+		return
+    
+    # 计算透明度（淡出效果，最后0.1秒开始淡出）
+	time_passed = current_display_time - text_display_start_time
+	alpha_value = 255
+	if time_passed > TEXT_DISPLAY_DURATION - 0.1:
+		fade_ratio = (TEXT_DISPLAY_DURATION - time_passed) / 0.1
+		alpha_value = int(255 * fade_ratio)
+    
+    # 绘制文字
 	s_width = pg.Surface.get_width(screen)
 	s_height = pg.Surface.get_height(screen)
-	text = judge
-	font = pg.font.SysFont(None,57)
-	alpha_value = 180
+	font = pg.font.SysFont(None, 57)
+    
+    # 根据文字内容设置颜色
+	if display_text == 'perfect':
+		color = (255, 255, 0)  # 黄色
+	elif display_text == 'good':
+		color = (0, 255, 0)    # 绿色
+	elif display_text == 'bad':
+		color = (255, 165, 0)  # 橙色
+	elif display_text == 'miss':
+		color = (255, 0, 0)    # 红色
+	else:
+		color = (255, 255, 255)  # 白色
 
-	text_image = font.render(text,True,'gray')
+	text_image = font.render(display_text,True,color)
 	text_image.set_alpha(alpha_value)
 	text_rect = text_image.get_rect()
 	text_rect.center = (s_width/2,s_height/3)
@@ -256,10 +310,11 @@ column_statement = [0,0,0,0]
 column_lock_clock = [0,0,0,0]
 note_duration_time = [0,0,0,0]
 rank_level_judge = [0,0,0,0]
+last_time = 0
 lock_time = 0
 combo = 0
 fall_speed = 650
-offset = -800
+offset = 700
 
 pg.init() #pygame初始化
 
@@ -278,7 +333,7 @@ for p in path:
 	elif(file[1] == '.ogg'):
 		song_player.append(p)
 		song_player_name.append(file[0])
-file_choose = file_play[3] #此处可手动更改铺面
+file_choose = file_play[0] #此处可手动更改铺面
 with open(file_choose,'r',encoding = 'utf-8') as file:
 	get_content = js.load(file)
 bpm = get_content['time'][0]['bpm'] #提取bpm信息
@@ -351,6 +406,8 @@ while isRunning:
 	pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
 
 	note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
+	text_draw(screen)
+	last_time = rank_check(rank_level_judge,last_time,start_time)
 
 	pg.display.update()
 	clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
