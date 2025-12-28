@@ -6,6 +6,7 @@ import time
 
 # 添加全局变量用于文字显示
 display_text = None
+combo = 0
 text_display_start_time = 0
 TEXT_DISPLAY_DURATION = 0.2  # 文字显示0.5秒
 TEXT_WINDOW_PERIOD = 0.05     # 文字窗口期，窗口期内不改变显示的文字
@@ -104,7 +105,7 @@ def note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rec
 #
 
 def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed):
-	global display_text, text_display_start_time
+	global display_text, text_display_start_time,combo
 	s_height = pg.Surface.get_height(screen)
 	current_time = pg.time.get_ticks()/1000.0-start_time
 	note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,current_time,s_height,fall_speed)
@@ -156,8 +157,8 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 					column_statement[i] = 1
 #
 
-def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge,combo):
-	global display_text, text_display_start_time
+def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge):
+	global display_text, text_display_start_time,combo
 	# 检查是否在窗口期内，如果是则保持原有文字不改变
 	current_display_time = pg.time.get_ticks()/1000.0 - start_time
 	if display_text is not None and (current_display_time - text_display_start_time) < TEXT_WINDOW_PERIOD:
@@ -188,7 +189,8 @@ def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,cur
 		text_display_start_time = current_display_time
 #
 
-def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_times,fall_speed,rank_level_judge,combo):
+def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_times,fall_speed,rank_level_judge):
+	global combo
 	mapping_table = {pg.K_a: 0,
         			 pg.K_s: 1,
         			 pg.K_k: 2,
@@ -209,7 +211,7 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 			return
 		if(rect_note_current[key_use][0].height == 10):
 			judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
-			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge,combo)
+			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge)
 			if(len(note_current[key_use]) > 0):
 				del note_current[key_use][0]
 			if(len(rect_note_current[key_use]) > 0):
@@ -219,7 +221,7 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 			judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
 			note_duration_time[key_use] = rect_note_current[key_use][0].height/fall_speed
 			column_lock_clock[key_use] = current_time
-			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge,combo)
+			rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge)
 	elif(keyboard_statement == 1):
 		if(column_lock_clock[key_use] != 0):
 			if(len(rect_note_current[key_use]) > 0 and rect_note_current[key_use][0].height > 10):
@@ -262,7 +264,7 @@ def long_note_height_change(key_use,label,screen,column_statement,column_lock_cl
 #
 
 def text_draw(screen):
-	global display_text, text_display_start_time
+	global display_text, text_display_start_time,combo
 	if display_text is None:
 		return
         
@@ -297,10 +299,16 @@ def text_draw(screen):
 	else:
 		color = (255, 255, 255)  # 白色
 
+	num_text = str(combo)
+	num_image = font.render(num_text,True,'white')
 	text_image = font.render(display_text,True,color)
+	num_image.set_alpha(alpha_value)
 	text_image.set_alpha(alpha_value)
+	num_rect = num_image.get_rect()
 	text_rect = text_image.get_rect()
-	text_rect.center = (s_width/2,s_height/3)
+	text_rect.center = (s_width//2,s_height//3)
+	num_rect.center = (s_width//2,s_height//3+text_rect.height)
+	screen.blit(num_image,num_rect)
 	screen.blit(text_image,text_rect)
 #
 
@@ -323,7 +331,6 @@ note_duration_time = [0,0,0,0]
 rank_level_judge = [0,0,0,0]
 last_time = 0
 lock_time = 0
-combo = 0
 fall_speed = 650
 offset = 700
 
@@ -402,9 +409,9 @@ while isRunning:
 				isRunning = False
 				break
 		if(ev.type == pg.KEYDOWN):
-			note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
+			note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
 		if(ev.type == pg.KEYUP):
-			note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge,combo)
+			note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
 	if(pg.time.get_ticks()/1000-start_time >= first_arrival_time and not music_play_flag):
 		pg.mixer.music.play()
 		music_play_flag = True
