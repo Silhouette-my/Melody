@@ -8,7 +8,7 @@ import sys
 import main_interface       # 主菜单
 import song_selection       # 选曲界面
 import setting              # 设置
-import play_interface_version2 as play  # 游戏逻辑（推荐用 version2）
+import play_interface_version2_no_text as play  # ?????no_text?
 
 # ======================
 # 1. 场景状态机
