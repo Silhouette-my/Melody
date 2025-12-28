@@ -20,15 +20,18 @@ STATE_RESULT = "result"
 STATE_SETTING= "setting"
 
 # 屏幕参数
-screen = pygame.display.set_mode((800, 600))
 
 def main():
+    pygame.init()
+    screen = pygame.display.set_mode((800, 600))
+    font = pygame.font.SysFont(None, 50)
     state = STATE_MENU
     selected_song = None
 
     while True:
         if state == STATE_MENU:
             # 调用主菜单界面       
+            screen.fill((0, 0, 0))
             text_rect = main_interface.screen_interface(screen, font)
             last_rect = main_interface.button_border_draw(screen, text_rect, 0)
             selected_index = 0
@@ -89,10 +92,16 @@ def main():
 
         elif state == STATE_SETTING:
             setting.run_settings()
+            pygame.init()
+            screen = pygame.display.set_mode((800, 600))
+            font = pygame.font.SysFont(None, 50)
             state = STATE_MENU
         elif state == STATE_PLAY:
             # 调用游戏逻辑 前往 play_interface
             play.run_game(selected_song)  # 你需要在 play_interface_version2.py 里写一个 run_game(file_path)
+            pygame.init()
+            screen = pygame.display.set_mode((800, 600))
+            font = pygame.font.SysFont(None, 50)
             state = STATE_RESULT
 
         elif state == STATE_RESULT:
