@@ -105,15 +105,99 @@ def button_border_draw(screen,text_rect,select_flag):
 def button_border_clear(screen,last_rect):
 	pg.draw.rect(screen,'black',last_rect,1)
 
-def slider_draw(screen,value,label,rect_text_use):
+def slider_draw(screen,value,label,rect_text_use,font,slider_volume_rect,slider_offset_rect):
+	width = pg.Surface.get_width(screen)
+	height = pg.Surface.get_height(screen)
 	if(label == 'volume'):
+		# 获取continue和quit按钮的矩形
+		# rect_text_use[2]是continue, rect_text_use[4]是quit
+		continue_rect = rect_text_use[2]
+		quit_rect = rect_text_use[4]
+		
+		# 滑动条的左端与continue左端对齐，右端与quit右端对齐
+		slider_left = continue_rect.left
+		slider_right = quit_rect.right
+		slider_width = (slider_right - slider_left)*value/100
+		
+		# 滑动条的高度与音量文本的高度相同
+		slider_height = rect_text_use[0].height
+		
+		# 滑动条的y位置与音量文本对齐
+		slider_y = rect_text_use[0].y
+		
+		# 创建滑动条矩形
+		slider_rect = pg.Rect(slider_left, slider_y, slider_width, slider_height)
 
+		volume_image = font.render(str(value), True, 'white')
+		volume_rect = volume_image.get_rect()
+		volume_rect.x = slider_right+20
+		volume_rect.y = slider_rect.y
+		
+		slider_volume_rect.append(slider_rect)
+		slider_volume_rect.append(volume_rect)
+		# 绘制滑动条背景
+		pg.draw.rect(screen, 'white', slider_rect)
+		surface = pg.display.get_surface()
+		if surface is not None:
+			surface.blit(volume_image, volume_rect)
+
+	elif(label == 'local offset'):
+		# 获取continue和quit按钮的矩形
+		# rect_text_use[2]是continue, rect_text_use[4]是quit
+		continue_rect = rect_text_use[2]
+		quit_rect = rect_text_use[4]
+		
+		# 滑动条的左端与continue左端对齐，右端与quit右端对齐
+		slider_left = continue_rect.left
+		slider_right = quit_rect.right
+		slider_width = slider_right - slider_left
+		
+		# 滑动条的高度与本地偏移文本的高度相同
+		slider_height = rect_text_use[1].height
+		
+		# 滑动条的y位置与本地偏移文本对齐
+		slider_y = rect_text_use[1].y
+		
+		# 创建滑动条矩形
+		slider_rect = pg.Rect(slider_left,slider_y,slider_width,slider_height)
+		slider_left_rect = pg.Rect(slider_left, slider_y, slider_width*(0.5+value/2000), slider_height)
+		slider_right_rect = pg.Rect(slider_left+slider_width*(0.5+value/2000),slider_y,slider_width*(0.5-value/2000),slider_height)
+		
+		offset_image = font.render(str(value), True, 'white')
+		offset_rect = offset_image.get_rect()
+		offset_rect.x = slider_right+20
+		offset_rect.y = slider_rect.y
+		
+		slider_offset_rect.append(slider_rect)
+		slider_offset_rect.append(offset_rect)
+		# 绘制滑动条背景
+		pg.draw.rect(screen, 'white', slider_left_rect)
+		pg.draw.rect(screen,'blue',slider_right_rect)
+		surface = pg.display.get_surface()
+		if surface is not None:
+			surface.blit(offset_image, offset_rect)
+
+def slider_clear(screen,label,slider_volume_rect,slider_offset_rect):
+	if(label == 'volume'):
+		for i in range(0,2,1):
+			pg.draw.rect(screen,'black',slider_volume_rect[i])
+		for i in range(0,len(slider_volume_rect),1):
+			del slider_volume_rect[0]
+	elif(label == 'local offset'):
+		for i in range(0,2,1):
+			pg.draw.rect(screen,'black',slider_offset_rect[i])
+		for i in range(0,len(slider_offset_rect),1):
+			del slider_offset_rect[0]
 
 pg.init()
 
 text_use = ['volume','local offset','continue','restart','quit']
 coordinate_text_use = list()
 rect_text_use = list()
+slider_volume_rect = list()
+slider_offset_rect = list()
+volume = 50
+offset = 0
 
 #
 if __name__ == "__main__":
@@ -129,15 +213,18 @@ if __name__ == "__main__":
 	flag = 0
 	coordinate_calculate(width,height,font,coordinate_text_use)
 	text_draw(screen,font,text_use,coordinate_text_use,rect_text_use)
+	slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+	slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 	last_rect = button_border_draw(screen,rect_text_use,flag)
+	last_update_time = 0
+	key_update_delay = 80
 	#要用的变量初始化
 
-	for i in rect_text_use:
-		print(i)
 	#
 	isRunning = True
 	
 	while isRunning:
+		current_time = pg.time.get_ticks()
 		for ev in pg.event.get():
 			if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
 				isRunning = False
@@ -151,11 +238,30 @@ if __name__ == "__main__":
 					button_border_clear(screen,last_rect)
 					flag = max(0,flag-1)
 					last_rect = button_border_draw(screen,rect_text_use,flag)
-				break
+		if(current_time - last_update_time > key_update_delay):
+			keys = pg.key.get_pressed()
+			if keys[pg.K_RIGHT]:
+				if(flag == 0):
+					slider_clear(screen,'volume',slider_volume_rect,slider_offset_rect)
+					volume = min(100,volume+1)
+					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+				elif(flag == 1):
+					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
+					offset = min(1000,offset+10)
+					slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+			elif keys[pg.K_LEFT]:
+				if(flag == 0):
+					slider_clear(screen,'volume',slider_volume_rect,slider_offset_rect)
+					volume = max(0,volume-1)
+					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+				elif(flag == 1):
+					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
+					offset = max(-1000,offset-10)
+					slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+			last_update_time = current_time
 
 		pg.display.update() #更新屏幕
 		clock.tick(60) #两次循环间隔(等价于60帧,保证按键有不响应期)
-	
 	
 	pg.quit()
 	#主程序
