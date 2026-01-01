@@ -7,17 +7,16 @@ import time
 # 添加全局变量用于文字显示
 display_text = None
 combo = 0
-max_combo = 0
 text_display_start_time = 0
 TEXT_DISPLAY_DURATION = 0.2  # 文字显示0.5秒
 TEXT_WINDOW_PERIOD = 0.05     # 文字窗口期，窗口期内不改变显示的文字
 
-# 记分器相关全局变量
+# 记分器全局变量
 score = 0
-judge_weight = [100, 50, 20, 10]  # perfect, good, bad, miss 的分数
+max_combo = 0
+judge_weight = [100, 50, 20, 10]  # 不同评价的分数
 last_combo_time = 0  # 上次连击变化的时间
-combo_display_duration = 1.0  # 连击特效显示持续时间（秒）
-combo_display_time = 0  # 连击特效显示的时间（秒）
+rank_level_judge = [0, 0, 0, 0]  # 不同等级统计，perfect,good,bad,miss
 
 def list_debug_check(target_list):
     list_length = len(target_list)
@@ -113,7 +112,7 @@ def note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rec
 #
 
 def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed):
-    global display_text, text_display_start_time, combo, max_combo, rank_level_judge, last_combo_time
+    global display_text, text_display_start_time, combo, rank_level_judge
     s_height = pg.Surface.get_height(screen)
     current_time = pg.time.get_ticks()/1000.0-start_time
     note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,current_time,s_height,fall_speed)
@@ -140,20 +139,6 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
                         rect_note.y = (s_height-100)-rect_note.height-time_diff*fall_speed
                 else:
                     rect_note.y = (s_height-100)-rect_note.height-time_diff*fall_speed
-                
-                # 检查音符是否已经错过判定线
-                note_bottom = rect_note.y + rect_note.height
-                judgment_line = s_height - 100
-                
-                # 如果音符底部超过判定线150像素，判定为Miss
-                if note_bottom > judgment_line + 150:
-                    rank_level_judge[3] += 1  # Miss计数加1
-                    combo = 0  # 连击清零
-                    last_combo_time = current_time  # 更新上次连击变化的时间
-                    del note_current[i][j]
-                    del rect_note_current[i][j]
-                    continue  # 跳过当前循环，继续处理下一个音符
-                
                 if(time_diff >= -s_height/fall_speed): #只渲染会出现在屏幕里的note,且在其出现前就预渲染好(避免长条渲染出错)
                     pg.draw.rect(screen,'white',rect_note,0)
                 j += 1
@@ -161,15 +146,13 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
                 if(rect_note.height == 10):
                     rank_level_judge[3] += 1
                     combo = 0
-                    last_combo_time = current_time
                     display_text = 'miss'
-                    text_display_start_time = current_time                    
+                    text_display_start_time = current_time					
                 # 音符已过判定线，检查是否是长条
                 elif(rect_note.height > 10 and note_duration_time[i] > 0):
                     # 长条未完成，判定为miss
                     rank_level_judge[3] += 1
                     combo = 0
-                    last_combo_time = current_time
                     display_text = 'miss'
                     text_display_start_time = current_time
                 del note_current[i][j]
@@ -182,12 +165,11 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 #
 
 def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge):
-    global display_text, text_display_start_time, combo, max_combo, score, last_combo_time, combo_display_time
+    global display_text, text_display_start_time, combo, score, max_combo
     # 检查是否在窗口期内，如果是则保持原有文字不改变
     current_display_time = pg.time.get_ticks()/1000.0 - start_time
     if display_text is not None and (current_display_time - text_display_start_time) < TEXT_WINDOW_PERIOD:
         return  # 窗口期内不改变文字
-    
     if(judge_time_diff <= 50/1000):
         rank_level_judge[0] += 1
         combo += 1
@@ -195,8 +177,6 @@ def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,cur
         pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
         display_text = 'perfect'
         text_display_start_time = current_display_time
-        last_combo_time = current_display_time  # 更新上次连击变化的时间
-        combo_display_time = current_display_time  # 设置连击特效显示的时间
     elif(judge_time_diff <= 80/1000):
         rank_level_judge[1] += 1
         combo += 1
@@ -204,8 +184,6 @@ def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,cur
         pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
         display_text = 'good'
         text_display_start_time = current_display_time
-        last_combo_time = current_display_time  # 更新上次连击变化的时间
-        combo_display_time = current_display_time  # 设置连击特效显示的时间
     elif(judge_time_diff <= 120/1000):
         rank_level_judge[2] += 1
         combo = 0
@@ -213,21 +191,21 @@ def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,cur
         pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
         display_text = 'bad'
         text_display_start_time = current_display_time
-        last_combo_time = current_display_time  # 更新上次连击变化的时间
     else:
         rank_level_judge[3] += 1
         combo = 0
+        score += judge_weight[3]  # 计算miss分数
         pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
         display_text = 'miss'
         text_display_start_time = current_display_time
-        last_combo_time = current_display_time  # 更新上次连击变化的时间
     
+    # 更新最大连击数
     if combo > max_combo:
-        max_combo = combo  # 更新最大连击数
+        max_combo = combo
 #
 
 def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_times,fall_speed,rank_level_judge):
-    global combo, last_combo_time
+    global combo, score
     mapping_table = {pg.K_a: 0,
                      pg.K_s: 1,
                      pg.K_k: 2,
@@ -239,7 +217,7 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 
     s_height = pg.Surface.get_height(screen)
     rank_time_diff = [50,80,120,200]
-    current_time = pg.time.get_ticks()/1000.0-start_time    
+    current_time = pg.time.get_ticks()/1000.0-start_time	
 
     if(keyboard_statement == 0):
         if(not len(rect_note_current[key_use])):
@@ -264,7 +242,6 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
             if(len(rect_note_current[key_use]) > 0 and rect_note_current[key_use][0].height > 10):
                 if(note_duration_time[key_use]-current_time > 0.1):
                     combo = 0
-                    last_combo_time = current_time
                 if(len(note_current[key_use]) > 0):
                     del note_current[key_use][0]
                 if(len(rect_note_current[key_use]) > 0):
@@ -275,14 +252,11 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 #
 
 def long_note_height_change(key_use,label,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,start_time,fall_speed):
-    #rect = pg.Rect(rect_note_current[key_use][label].x,rect_note_current[key_use][label].y+rect_note_current[key_use][label].height,80,10)
     current_time = pg.time.get_ticks()/1000.0 - start_time
     if(rect_note_current[key_use][label].height > 10):
         press_time = current_time - column_lock_clock[key_use]
         height_reduced = press_time * fall_speed
         original_height = rect_note_current[key_use][label].height
-        #rect_note_current[key_use][label].y += press_time*fall_speed
-        #rect_note_current[key_use][label].height = max(10,rect.y-rect_note_current[key_use][label].y)
         rect_note_current[key_use][label].height = max(10, rect_note_current[key_use][label].height - height_reduced)
         height_change = original_height - rect_note_current[key_use][label].height
         rect_note_current[key_use][label].y += height_change
@@ -299,87 +273,6 @@ def long_note_height_change(key_use,label,screen,column_statement,column_lock_cl
         # 长条已经结束
         return True
     return False
-#
-
-def draw_combo_effect(screen):
-    global combo, last_combo_time, combo_display_duration, start_time
-    # 获取当前时间
-    current_time = pg.time.get_ticks()/1000.0 - start_time
-    
-    # 检查是否应该显示连击特效
-    # 条件1：连击数≥3
-    # 条件2：距离上次连击变化的时间小于显示持续时间
-    if combo >= 3 and (current_time - last_combo_time) < combo_display_duration:
-        s_width = pg.Surface.get_width(screen)
-        s_height = pg.Surface.get_height(screen)
-        
-        # 计算透明度（渐隐效果）
-        time_since_combo = current_time - last_combo_time
-        alpha = int(255 * (1.0 - time_since_combo / combo_display_duration))  # 随时间减少
-        
-        # 根据连击数调整字体大小和颜色
-        if combo >= 50:
-            font_size = 80
-            color = (255, 50, 50)
-        elif combo >= 20:
-            font_size = 60
-            color = (255, 150, 50)
-        else:
-            font_size = 40
-            color = (255, 255, 100)
-        
-        combo_font = pg.font.SysFont(None, font_size)
-        combo_text = combo_font.render(f'{combo} COMBO!', True, color)
-        
-        # 设置透明度
-        combo_text.set_alpha(alpha)
-        combo_rect = combo_text.get_rect()
-        combo_rect.center = (s_width // 2, s_height // 4)
-        
-        # 添加阴影效果
-        shadow_text = combo_font.render(f'{combo} COMBO!', True, (0, 0, 0))
-        shadow_text.set_alpha(alpha // 2)  # 阴影半透明
-        shadow_rect = combo_rect.copy()
-        shadow_rect.x += 3
-        shadow_rect.y += 3
-        
-        screen.blit(shadow_text, shadow_rect)
-        screen.blit(combo_text, combo_rect)
-#
-
-def draw_score_display(screen):
-    global score, combo, max_combo, rank_level_judge
-    s_width = pg.Surface.get_width(screen)  # 获取窗口宽度
-    
-    # 绘制分数显示
-    score_font = pg.font.SysFont(None, 24)
-    score_text = score_font.render(f'Score: {score}', True, (255, 255, 255))
-    screen.blit(score_text, (20, 20))
-    
-    # 绘制连击显示
-    combo_color = (255, 100, 100) if combo >= 10 else (255, 255, 255)
-    combo_text = score_font.render(f'Combo: {combo}', True, combo_color)
-    screen.blit(combo_text, (20, 60))
-    
-    # 绘制最大连击显示
-    max_combo_text = score_font.render(f'Max Combo: {max_combo}', True, (200, 200, 255))
-    screen.blit(max_combo_text, (20, 100))
-    
-    # 绘制评价统计显示
-    judge_text = score_font.render(
-        f'P: {rank_level_judge[0]} G: {rank_level_judge[1]} B: {rank_level_judge[2]} M: {rank_level_judge[3]}',
-        True, (255, 255, 255))
-    screen.blit(judge_text, (20, 140))
-    
-    # 绘制准确率显示
-    total_hits = sum(rank_level_judge)
-    if total_hits > 0:
-        accuracy = (rank_level_judge[0] + rank_level_judge[1] * 0.5) / total_hits * 100
-        acc_text = score_font.render(f'Accuracy: {accuracy:.2f}%', True, (150, 255, 150))
-        screen.blit(acc_text, (20, 180))
-    
-    # 绘制连击特效
-    draw_combo_effect(screen)
 #
 
 def text_draw(screen):
@@ -431,9 +324,48 @@ def text_draw(screen):
     screen.blit(text_image,text_rect)
 #
 
+def draw_score_display(screen):
+    global score, combo, max_combo, rank_level_judge
+    
+    s_width = pg.Surface.get_width(screen)
+    score_font = pg.font.SysFont(None, 16)
+    
+    # 绘制分数显示
+    score_text = score_font.render(f'Score: {score}', True, (255, 255, 255))
+    screen.blit(score_text, (20, 20))
+    
+    # 绘制连击显示
+    combo_color = (255, 100, 100) if combo >= 10 else (255, 255, 255)
+    combo_text = score_font.render(f'Combo: {combo}', True, combo_color)
+    screen.blit(combo_text, (20, 60))
+    
+    # 绘制最大连击显示
+    max_combo_text = score_font.render(f'Max Combo: {max_combo}', True, (200, 200, 255))
+    screen.blit(max_combo_text, (20, 100))
+    
+    # 绘制评价统计显示
+    judge_text = score_font.render(
+        f'P: {rank_level_judge[0]} G: {rank_level_judge[1]} B: {rank_level_judge[2]} M: {rank_level_judge[3]}',
+        True, (255, 255, 255))
+    screen.blit(judge_text, (20, 140))
+    
+    # 绘制准确率显示
+    total_hits = sum(rank_level_judge)
+    if total_hits > 0:
+        accuracy = (rank_level_judge[0] + rank_level_judge[1] * 0.5) / total_hits * 100
+        acc_text = score_font.render(f'Accuracy: {accuracy:.2f}%', True, (150, 255, 150))
+        screen.blit(acc_text, (20, 180))
+#
 
 def run_game(file_path=None):
-    global beat_delta, start_time, rank_level_judge, score, combo, max_combo, last_combo_time, combo_display_time
+    global beat_delta, start_time, rank_level_judge, score, max_combo, combo
+    
+    # 重置分数相关全局变量
+    score = 0
+    max_combo = 0
+    combo = 0
+    rank_level_judge = [0, 0, 0, 0]
+    
     note_storage = list()
     list_space_initialize(note_storage,4)
     rect_note_storage = list()
@@ -450,18 +382,10 @@ def run_game(file_path=None):
     column_statement = [0,0,0,0]
     column_lock_clock = [0,0,0,0]
     note_duration_time = [0,0,0,0]
-    rank_level_judge = [0,0,0,0]
     last_time = 0
     lock_time = 0
     fall_speed = 650
     offset = 700
-
-    # 重置记分器相关变量
-    score = 0
-    combo = 0
-    max_combo = 0
-    last_combo_time = 0
-    combo_display_time = 0
 
     pg.init() #pygame初始化
 
@@ -527,7 +451,7 @@ def run_game(file_path=None):
     note_time_initialize(note_storage,note,screen)
     note_rect_initialize(note,rect_note_storage,screen,column_note_positions,beat_delta,fall_speed)
 
-    clock = pg.time.Clock()    #计时器
+    clock = pg.time.Clock()	#计时器
     isRunning = True
     music_play_flag = False
     isDoing = True
@@ -559,10 +483,11 @@ def run_game(file_path=None):
         pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
 
         note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
-        text_draw(screen)
         
-        # 绘制分数和连击显示
+        # 绘制左上角记分器
         draw_score_display(screen)
+        
+        text_draw(screen)
 
         if(not(end_judge(note,note_read_sp) and len(note_current))):
             last_time = rank_check(rank_level_judge,last_time,start_time)
