@@ -18,7 +18,7 @@ def _button_border_draw(screen, text_rect, select_flag):
     return last_rect
 
 
-def _render_menu(screen, font, small_font, volume, latency_ms, selected_index):
+def _render_menu(screen, font, small_font, volume, latency_ms, size_label, selected_index):
     screen.fill((0, 0, 0))
     width, height = screen.get_size()
     _draw_text_centered(screen, font, "Settings", (width // 2, height // 6))
@@ -26,6 +26,7 @@ def _render_menu(screen, font, small_font, volume, latency_ms, selected_index):
     items = [
         f"Master Volume: {int(volume * 100)}%",
         f"Latency Calibration: {latency_ms} ms",
+        f"Screen Size: {size_label}",
         "Back",
     ]
     rects = []
@@ -134,9 +135,14 @@ def _run_latency_calibration(screen, font, small_font, clock, current_latency):
         clock.tick(60)
 
 
-def run_settings(master_volume=1.0, latency_ms=0):
+def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
     pg.init()
-    screen = pg.display.set_mode((800, 600))
+    screen_sizes = [(800, 600), (1280, 760), (1920, 1080)]
+    if screen_size in screen_sizes:
+        size_select = screen_sizes.index(screen_size)
+    else:
+        size_select = 0
+    screen = pg.display.set_mode(screen_sizes[size_select])
     clock = pg.time.Clock()
     font = pg.font.SysFont(None, 50)
     small_font = pg.font.SysFont(None, 26)
@@ -154,7 +160,7 @@ def run_settings(master_volume=1.0, latency_ms=0):
                 break
             if ev.type == pg.KEYDOWN:
                 if ev.key == pg.K_DOWN:
-                    selected_index = min(selected_index + 1, 2)
+                    selected_index = min(selected_index + 1, 3)
                 elif ev.key == pg.K_UP:
                     selected_index = max(selected_index - 1, 0)
                 elif ev.key == pg.K_LEFT and selected_index == 0:
@@ -165,18 +171,29 @@ def run_settings(master_volume=1.0, latency_ms=0):
                     master_volume = min(1.0, master_volume + 0.05)
                     if pg.mixer.get_init():
                         pg.mixer.music.set_volume(master_volume)
+                elif ev.key == pg.K_LEFT and selected_index == 2:
+                    size_select = max(0, size_select - 1)
+                    screen = pg.display.set_mode(screen_sizes[size_select])
+                elif ev.key == pg.K_RIGHT and selected_index == 2:
+                    size_select = min(len(screen_sizes) - 1, size_select + 1)
+                    screen = pg.display.set_mode(screen_sizes[size_select])
                 elif ev.key == pg.K_RETURN:
                     if selected_index == 1:
                         latency_ms = _run_latency_calibration(screen, font, small_font, clock, latency_ms)
-                    elif selected_index == 2:
+                    elif selected_index == 3:
                         running = False
                         break
 
-        _render_menu(screen, font, small_font, master_volume, latency_ms, selected_index)
+        size_label = f"{screen_sizes[size_select][0]}x{screen_sizes[size_select][1]}"
+        _render_menu(screen, font, small_font, master_volume, latency_ms, size_label, selected_index)
         pg.display.update()
         clock.tick(60)
 
-    return {"master_volume": master_volume, "latency_ms": latency_ms}
+    return {
+        "master_volume": master_volume,
+        "latency_ms": latency_ms,
+        "screen_size": screen_sizes[size_select],
+    }
 
 
 if __name__ == "__main__":

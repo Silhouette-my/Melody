@@ -359,7 +359,7 @@ def draw_score_display(screen):
         screen.blit(acc_text, (20, 180))
 #
 
-def run_game(file_path=None, master_volume=1.0, current_latency=0):
+def run_game(file_path=None, master_volume=1.0, current_latency=0, screen_size=None):
     global beat_delta, start_time, rank_level_judge, score, max_combo, combo, time_offset_sec
     
     # 重置分数相关全局变量
@@ -443,9 +443,12 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0):
             break
 
     #
-    screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
-    size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
-    screen = pg.display.set_mode(screen_size[size_select])
+    if screen_size is None:
+        screen_sizes = [(800,600),(1280,760),(1920,1080)] #??????
+        size_select = 0 #????????(???????????????????????)
+        screen = pg.display.set_mode(screen_sizes[size_select])
+    else:
+        screen = pg.display.set_mode(screen_size)
     #初始化窗口
 
     background = pg.Surface(screen.get_size())

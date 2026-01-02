@@ -29,6 +29,7 @@ def main():
     selected_song = None
     master_volume = 1.0
     current_latency = 0
+    screen_size = (800, 600)
 
     while True:
         if state == STATE_MENU:
@@ -87,27 +88,29 @@ def main():
                         elif ev.key == pygame.K_UP:
                             title_flag = max(title_flag-1, 0)
                 screen.fill((0,0,0))
-                song_selection.text_draw(title_flag, pygame.font.SysFont(None,50), (800,600), 0)
-                song_selection.attention_draw(screen,(800,600),0)
+                song_selection.text_draw(title_flag, pygame.font.SysFont(None,50), screen_size, 0)
+                song_selection.attention_draw(screen,screen_size,0)
                 pygame.display.update()
                 clock.tick(60)
 
         elif state == STATE_SETTING:
-            settings = setting.run_settings(master_volume, current_latency)
+            settings = setting.run_settings(master_volume, current_latency, screen_size)
             if isinstance(settings, dict):
                 if "master_volume" in settings:
                     master_volume = settings["master_volume"]
                 if "latency_ms" in settings:
                     current_latency = settings["latency_ms"]
+                if "screen_size" in settings:
+                    screen_size = settings["screen_size"]
             pygame.init()
-            screen = pygame.display.set_mode((800, 600))
+            screen = pygame.display.set_mode(screen_size)
             font = pygame.font.SysFont(None, 50)
             state = STATE_MENU
         elif state == STATE_PLAY:
             # 调用游戏逻辑 前往 play_interface
-            play.run_game(selected_song, master_volume, current_latency)
+            play.run_game(selected_song, master_volume, current_latency, screen_size)
             pygame.init()
-            screen = pygame.display.set_mode((800, 600))
+            screen = pygame.display.set_mode(screen_size)
             font = pygame.font.SysFont(None, 50)
             state = STATE_RESULT
 
@@ -115,7 +118,7 @@ def main():
             # 简单结果界面
             font = pygame.font.SysFont(None, 50)
             text = font.render("Game Over - Press Enter to return", True, 'white')
-            rect = text.get_rect(center=(400,300))
+            rect = text.get_rect(center=screen.get_rect().center)
             screen.blit(text, rect)
             pygame.display.update()
             waiting = True
