@@ -49,9 +49,30 @@ def _run_latency_calibration(screen, font, small_font, clock, current_latency):
     travel_time = 1200
     beat_interval = 600
     num_beats = 6
+    beep = None
+    if not pg.mixer.get_init():
+        try:
+            pg.mixer.init()
+        except pg.error:
+            pass
+    if pg.mixer.get_init():
+        sample_rate = 44100
+        freq = 880
+        duration = 0.08
+        length = int(sample_rate * duration)
+        buf = bytearray(length * 2)
+        for i in range(length):
+            sample = 16000 if (i * freq * 2 // sample_rate) % 2 == 0 else -16000
+            buf[i * 2:i * 2 + 2] = int(sample).to_bytes(2, byteorder="little", signed=True)
+        beep = pg.mixer.Sound(buffer=bytes(buf))
 
-    start_time = pg.time.get_ticks() + 1000
+    pre_beats = 4
+    pre_start = pg.time.get_ticks()
+    start_time = pre_start + pre_beats * beat_interval
+    pre_beat_times = [pre_start + i * beat_interval for i in range(pre_beats)]
     beat_times = [start_time + i * beat_interval for i in range(num_beats)]
+    beat_played = [False] * num_beats
+    pre_beat_played = [False] * pre_beats
     speed = (target_y - start_y) / float(travel_time)
 
     hits = []
@@ -60,6 +81,15 @@ def _run_latency_calibration(screen, font, small_font, clock, current_latency):
 
     while True:
         now = pg.time.get_ticks()
+        if beep is not None:
+            for i, beat_time in enumerate(pre_beat_times):
+                if not pre_beat_played[i] and now >= beat_time:
+                    beep.play()
+                    pre_beat_played[i] = True
+            for i, beat_time in enumerate(beat_times):
+                if not beat_played[i] and now >= beat_time:
+                    beep.play()
+                    beat_played[i] = True
         for ev in pg.event.get():
             if ev.type == pg.QUIT:
                 return current_latency
@@ -104,7 +134,7 @@ def _run_latency_calibration(screen, font, small_font, clock, current_latency):
         clock.tick(60)
 
 
-def run_settings():
+def run_settings(master_volume=1.0, latency_ms=0):
     pg.init()
     screen = pg.display.set_mode((800, 600))
     clock = pg.time.Clock()
@@ -112,8 +142,6 @@ def run_settings():
     small_font = pg.font.SysFont(None, 26)
 
     selected_index = 0
-    master_volume = 1.0
-    latency_ms = 0
 
     if pg.mixer.get_init():
         pg.mixer.music.set_volume(master_volume)

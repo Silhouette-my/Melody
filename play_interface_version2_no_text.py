@@ -2,6 +2,7 @@ import json as js
 import os
 import numpy as np
 import pygame as pg
+import pause_interface
 import time
 
 # 添加全局变量用于文字显示
@@ -15,6 +16,7 @@ TEXT_WINDOW_PERIOD = 0.05     # 文字窗口期，窗口期内不改变显示的
 score = 0
 max_combo = 0
 judge_weight = [100, 50, 20, 10]  # 不同评价的分数
+time_offset_sec = 0.0
 last_combo_time = 0  # 上次连击变化的时间
 rank_level_judge = [0, 0, 0, 0]  # 不同等级统计，perfect,good,bad,miss
 
@@ -26,7 +28,7 @@ def list_debug_check(target_list):
 #
 
 def rank_check(rank_level_judge,last_time,start_time):
-    current_time = pg.time.get_ticks()/1000 - start_time
+    current_time = pg.time.get_ticks()/1000 - start_time + time_offset_sec
     if(current_time - last_time >= 0.5):
         print(rank_level_judge)
         return current_time
@@ -114,7 +116,7 @@ def note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rec
 def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed):
     global display_text, text_display_start_time, combo, rank_level_judge
     s_height = pg.Surface.get_height(screen)
-    current_time = pg.time.get_ticks()/1000.0-start_time
+    current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
     note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,current_time,s_height,fall_speed)
     for i in range(0,4,1):
         j = 0
@@ -167,7 +169,7 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge):
     global display_text, text_display_start_time, combo, score, max_combo
     # 检查是否在窗口期内，如果是则保持原有文字不改变
-    current_display_time = pg.time.get_ticks()/1000.0 - start_time
+    current_display_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
     if display_text is not None and (current_display_time - text_display_start_time) < TEXT_WINDOW_PERIOD:
         return  # 窗口期内不改变文字
     if(judge_time_diff <= 50/1000):
@@ -217,7 +219,7 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 
     s_height = pg.Surface.get_height(screen)
     rank_time_diff = [50,80,120,200]
-    current_time = pg.time.get_ticks()/1000.0-start_time	
+    current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec	
 
     if(keyboard_statement == 0):
         if(not len(rect_note_current[key_use])):
@@ -252,7 +254,7 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
 #
 
 def long_note_height_change(key_use,label,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,start_time,fall_speed):
-    current_time = pg.time.get_ticks()/1000.0 - start_time
+    current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
     if(rect_note_current[key_use][label].height > 10):
         press_time = current_time - column_lock_clock[key_use]
         height_reduced = press_time * fall_speed
@@ -280,7 +282,7 @@ def text_draw(screen):
     if display_text is None:
         return
         
-    current_display_time = pg.time.get_ticks()/1000.0 - start_time
+    current_display_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
     
     # 检查是否超过显示时间
     if current_display_time - text_display_start_time > TEXT_DISPLAY_DURATION:
@@ -357,8 +359,8 @@ def draw_score_display(screen):
         screen.blit(acc_text, (20, 180))
 #
 
-def run_game(file_path=None):
-    global beat_delta, start_time, rank_level_judge, score, max_combo, combo
+def run_game(file_path=None, master_volume=1.0, current_latency=0):
+    global beat_delta, start_time, rank_level_judge, score, max_combo, combo, time_offset_sec
     
     # 重置分数相关全局变量
     score = 0
@@ -385,9 +387,14 @@ def run_game(file_path=None):
     last_time = 0
     lock_time = 0
     fall_speed = 650
-    offset = 700
+    local_offset = 0
+    final_offset_ms = current_latency + local_offset
+    time_offset_sec = final_offset_ms / 1000.0
+    offset = final_offset_ms
 
     pg.init() #pygame初始化
+    if pg.mixer.get_init():
+        pg.mixer.music.set_volume(master_volume)
 
     #读取铺面文件所在路径
     root = os.getcwd()
@@ -456,6 +463,9 @@ def run_game(file_path=None):
     music_play_flag = False
     isDoing = True
     start_time = pg.time.get_ticks()/1000.0
+    pause_start_ms = None
+    resume_countdown = False
+    countdown_start_ms = 0
 
     while isRunning:
         for ev in pg.event.get():
@@ -464,13 +474,47 @@ def run_game(file_path=None):
                 break
             if(ev.type == pg.KEYDOWN):
                 if(ev.key == pg.K_ESCAPE):
-                    isRunning = False
-                    break
+                    pause_start_ms = pg.time.get_ticks()
+                    if pg.mixer.get_init():
+                        pg.mixer.music.pause()
+                    action, master_volume, local_offset = pause_interface.run_pause(screen, master_volume, local_offset)
+                    if pg.mixer.get_init():
+                        pg.mixer.music.set_volume(master_volume)
+                    final_offset_ms = current_latency + local_offset
+                    time_offset_sec = final_offset_ms / 1000.0
+                    resume_countdown = True
+                    countdown_start_ms = pg.time.get_ticks()
+                    if action == "quit":
+                        isRunning = False
+                        break
+                    if action == "restart":
+                        return "restart"
             if(ev.type == pg.KEYDOWN):
                 note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
             if(ev.type == pg.KEYUP):
                 note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
-        if(pg.time.get_ticks()/1000-start_time >= first_arrival_time and not music_play_flag):
+
+        now_ms = pg.time.get_ticks()
+        if resume_countdown:
+            elapsed = now_ms - countdown_start_ms
+            remaining = 3 - int(elapsed / 1000)
+            if remaining <= 0:
+                resume_countdown = False
+                if pg.mixer.get_init():
+                    pg.mixer.music.unpause()
+                if pause_start_ms is not None:
+                    start_time += (now_ms - pause_start_ms) / 1000.0
+                    pause_start_ms = None
+            else:
+                screen.fill((0, 0, 0))
+                countdown_font = pg.font.SysFont(None, 120)
+                num_text = countdown_font.render(str(remaining), True, "white")
+                num_rect = num_text.get_rect(center=(s_width//2, s_height//2))
+                screen.blit(num_text, num_rect)
+                pg.display.update()
+                clock.tick(60)
+                continue
+        if(pg.time.get_ticks()/1000 - start_time + time_offset_sec >= first_arrival_time and not music_play_flag):
             pg.mixer.music.play()
             music_play_flag = True
         screen.blit(background, (0, 0))

@@ -189,6 +189,91 @@ def slider_clear(screen,label,slider_volume_rect,slider_offset_rect):
 		for i in range(0,len(slider_offset_rect),1):
 			del slider_offset_rect[0]
 
+def run_pause(screen, current_volume, current_offset):
+	width = pg.Surface.get_width(screen)
+	height = pg.Surface.get_height(screen)
+	clock = pg.time.Clock()
+	font = pg.font.SysFont(None,40)
+
+	text_use = ['volume','local offset','continue','restart','quit']
+	coordinate_text_use = list()
+	rect_text_use = list()
+	slider_volume_rect = list()
+	slider_offset_rect = list()
+	volume = max(0, min(100, int(round(current_volume * 100))))
+	offset = int(current_offset)
+	flag = 0
+
+	coordinate_calculate(width,height,font,coordinate_text_use)
+	text_draw(screen,font,text_use,coordinate_text_use,rect_text_use)
+	slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+	slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+	last_rect = button_border_draw(screen,rect_text_use,flag)
+	last_update_time = 0
+	key_update_delay = 80
+	action = "resume"
+
+	isRunning = True
+	while isRunning:
+		current_time = pg.time.get_ticks()
+		for ev in pg.event.get():
+			if(ev.type == pg.QUIT):
+				action = "quit"
+				isRunning = False
+				break
+			elif(ev.type == pg.KEYDOWN):
+				if(ev.key == pg.K_ESCAPE):
+					action = "resume"
+					isRunning = False
+					break
+				elif(ev.key == pg.K_DOWN):
+					button_border_clear(screen,last_rect)
+					flag = min(4,flag+1)
+					last_rect = button_border_draw(screen,rect_text_use,flag)
+				elif(ev.key == pg.K_UP):
+					button_border_clear(screen,last_rect)
+					flag = max(0,flag-1)
+					last_rect = button_border_draw(screen,rect_text_use,flag)
+				elif(ev.key == pg.K_RETURN):
+					if(flag == 2):
+						action = "resume"
+					elif(flag == 3):
+						action = "restart"
+					elif(flag == 4):
+						action = "quit"
+					isRunning = False
+					break
+		if(current_time - last_update_time > key_update_delay):
+			keys = pg.key.get_pressed()
+			if keys[pg.K_RIGHT]:
+				if(flag == 0):
+					slider_clear(screen,'volume',slider_volume_rect,slider_offset_rect)
+					volume = min(100,volume+1)
+					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+					if pg.mixer.get_init():
+						pg.mixer.music.set_volume(volume/100)
+				elif(flag == 1):
+					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
+					offset = min(1000,offset+10)
+					slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+			elif keys[pg.K_LEFT]:
+				if(flag == 0):
+					slider_clear(screen,'volume',slider_volume_rect,slider_offset_rect)
+					volume = max(0,volume-1)
+					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+					if pg.mixer.get_init():
+						pg.mixer.music.set_volume(volume/100)
+				elif(flag == 1):
+					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
+					offset = max(-1000,offset-10)
+					slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+			last_update_time = current_time
+
+		pg.display.update()
+		clock.tick(60)
+
+	return action, volume/100.0, offset
+
 pg.init()
 
 text_use = ['volume','local offset','continue','restart','quit']
@@ -201,67 +286,8 @@ offset = 0
 
 #
 if __name__ == "__main__":
-	screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
-	size_select = 1 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
+	screen_size = [(800,600),(1280,760),(1920,1080)] #??????????????????
+	size_select = 1 #????????????????????????(?????????????????????????????????????????????????????????????????????)
 	screen = pg.display.set_mode(screen_size[size_select])
-	width, height = screen_size[size_select]
-	#初始化窗口
-
-	#
-	clock = pg.time.Clock()	#计时器
-	font = pg.font.SysFont(None,40) #字体数据初始化
-	flag = 0
-	coordinate_calculate(width,height,font,coordinate_text_use)
-	text_draw(screen,font,text_use,coordinate_text_use,rect_text_use)
-	slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
-	slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
-	last_rect = button_border_draw(screen,rect_text_use,flag)
-	last_update_time = 0
-	key_update_delay = 80
-	#要用的变量初始化
-
-	#
-	isRunning = True
-	
-	while isRunning:
-		current_time = pg.time.get_ticks()
-		for ev in pg.event.get():
-			if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
-				isRunning = False
-				break
-			elif(ev.type == pg.KEYDOWN):
-				if(ev.key == pg.K_DOWN):
-					button_border_clear(screen,last_rect)
-					flag = min(4,flag+1)
-					last_rect = button_border_draw(screen,rect_text_use,flag)
-				elif(ev.key == pg.K_UP):
-					button_border_clear(screen,last_rect)
-					flag = max(0,flag-1)
-					last_rect = button_border_draw(screen,rect_text_use,flag)
-		if(current_time - last_update_time > key_update_delay):
-			keys = pg.key.get_pressed()
-			if keys[pg.K_RIGHT]:
-				if(flag == 0):
-					slider_clear(screen,'volume',slider_volume_rect,slider_offset_rect)
-					volume = min(100,volume+1)
-					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
-				elif(flag == 1):
-					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
-					offset = min(1000,offset+10)
-					slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
-			elif keys[pg.K_LEFT]:
-				if(flag == 0):
-					slider_clear(screen,'volume',slider_volume_rect,slider_offset_rect)
-					volume = max(0,volume-1)
-					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
-				elif(flag == 1):
-					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
-					offset = max(-1000,offset-10)
-					slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
-			last_update_time = current_time
-
-		pg.display.update() #更新屏幕
-		clock.tick(60) #两次循环间隔(等价于60帧,保证按键有不响应期)
-	
+	run_pause(screen, 0.5, 0)
 	pg.quit()
-	#主程序

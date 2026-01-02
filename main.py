@@ -27,6 +27,8 @@ def main():
     font = pygame.font.SysFont(None, 50)
     state = STATE_MENU
     selected_song = None
+    master_volume = 1.0
+    current_latency = 0
 
     while True:
         if state == STATE_MENU:
@@ -91,14 +93,19 @@ def main():
                 clock.tick(60)
 
         elif state == STATE_SETTING:
-            setting.run_settings()
+            settings = setting.run_settings(master_volume, current_latency)
+            if isinstance(settings, dict):
+                if "master_volume" in settings:
+                    master_volume = settings["master_volume"]
+                if "latency_ms" in settings:
+                    current_latency = settings["latency_ms"]
             pygame.init()
             screen = pygame.display.set_mode((800, 600))
             font = pygame.font.SysFont(None, 50)
             state = STATE_MENU
         elif state == STATE_PLAY:
             # 调用游戏逻辑 前往 play_interface
-            play.run_game(selected_song)  # 你需要在 play_interface_version2.py 里写一个 run_game(file_path)
+            play.run_game(selected_song, master_volume, current_latency)
             pygame.init()
             screen = pygame.display.set_mode((800, 600))
             font = pygame.font.SysFont(None, 50)
