@@ -194,6 +194,7 @@ def run_pause(screen, current_volume, current_offset):
 	height = pg.Surface.get_height(screen)
 	clock = pg.time.Clock()
 	font = pg.font.SysFont(None,40)
+	screen.fill((0, 0, 0))
 
 	text_use = ['volume','local offset','continue','restart','quit']
 	coordinate_text_use = list()

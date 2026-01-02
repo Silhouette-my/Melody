@@ -421,7 +421,20 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0):
         get_content = js.load(file)
     bpm = get_content['time'][0]['bpm'] #提取bpm信息
     beat_delta = 60.0/bpm # 一小节时长
-    note = get_content['note'] #提取note信息
+    note = get_content['note'] #??note??
+    beat_interval_ms = int(beat_delta * 1000)
+    metronome_sound = None
+    if pg.mixer.get_init():
+        sample_rate = 44100
+        freq = 880
+        duration = 0.06
+        length = int(sample_rate * duration)
+        buf = bytearray(length * 2)
+        for i in range(length):
+            sample = 16000 if (i * freq * 2 // sample_rate) % 2 == 0 else -16000
+            buf[i * 2:i * 2 + 2] = int(sample).to_bytes(2, byteorder="little", signed=True)
+        metronome_sound = pg.mixer.Sound(buffer=bytes(buf))
+
 
     title_song = get_content['meta']['song']['title']
     for i in range(0,len(song_player),1):
@@ -463,9 +476,11 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0):
     music_play_flag = False
     isDoing = True
     start_time = pg.time.get_ticks()/1000.0
-    pause_start_ms = None
-    resume_countdown = False
-    countdown_start_ms = 0
+    resume_metronome_active = False
+    resume_start_ms = 0
+    resume_beat_index = 0
+    resume_total_beats = 8
+    freeze_elapsed = None
 
     while isRunning:
         for ev in pg.event.get():
@@ -474,7 +489,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0):
                 break
             if(ev.type == pg.KEYDOWN):
                 if(ev.key == pg.K_ESCAPE):
-                    pause_start_ms = pg.time.get_ticks()
+                    freeze_elapsed = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
                     if pg.mixer.get_init():
                         pg.mixer.music.pause()
                     action, master_volume, local_offset = pause_interface.run_pause(screen, master_volume, local_offset)
@@ -482,8 +497,9 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0):
                         pg.mixer.music.set_volume(master_volume)
                     final_offset_ms = current_latency + local_offset
                     time_offset_sec = final_offset_ms / 1000.0
-                    resume_countdown = True
-                    countdown_start_ms = pg.time.get_ticks()
+                    resume_metronome_active = True
+                    resume_start_ms = pg.time.get_ticks()
+                    resume_beat_index = 0
                     if action == "quit":
                         isRunning = False
                         break
@@ -495,26 +511,18 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0):
                 note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
 
         now_ms = pg.time.get_ticks()
-        if resume_countdown:
-            elapsed = now_ms - countdown_start_ms
-            remaining = 3 - int(elapsed / 1000)
-            if remaining <= 0:
-                resume_countdown = False
+        if resume_metronome_active:
+            start_time = pg.time.get_ticks()/1000.0 - time_offset_sec - freeze_elapsed
+            if metronome_sound is not None:
+                if now_ms - resume_start_ms >= resume_beat_index * beat_interval_ms and resume_beat_index < resume_total_beats:
+                    metronome_sound.play()
+                    resume_beat_index += 1
+            if resume_beat_index >= resume_total_beats:
+                resume_metronome_active = False
+                freeze_elapsed = None
                 if pg.mixer.get_init():
                     pg.mixer.music.unpause()
-                if pause_start_ms is not None:
-                    start_time += (now_ms - pause_start_ms) / 1000.0
-                    pause_start_ms = None
-            else:
-                screen.fill((0, 0, 0))
-                countdown_font = pg.font.SysFont(None, 120)
-                num_text = countdown_font.render(str(remaining), True, "white")
-                num_rect = num_text.get_rect(center=(s_width//2, s_height//2))
-                screen.blit(num_text, num_rect)
-                pg.display.update()
-                clock.tick(60)
-                continue
-        if(pg.time.get_ticks()/1000 - start_time + time_offset_sec >= first_arrival_time and not music_play_flag):
+        if(pg.time.get_ticks()/1000 - start_time + time_offset_sec >= first_arrival_time and not music_play_flag and not resume_metronome_active):
             pg.mixer.music.play()
             music_play_flag = True
         screen.blit(background, (0, 0))
