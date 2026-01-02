@@ -3,6 +3,8 @@ import os
 import numpy as np
 import pygame as pg
 import time
+import shared_state
+import sys
 
 def text_draw(screen,font,text_use,coordinate,rect_text_use):
 	width = pg.Surface.get_width(screen)
@@ -201,7 +203,7 @@ def run_pause(screen, current_volume, current_offset):
 	rect_text_use = list()
 	slider_volume_rect = list()
 	slider_offset_rect = list()
-	volume = max(0, min(100, int(round(current_volume * 100))))
+	volume = max(0, min(100, int(round(shared_state.MASTER_VOLUME * 100))))
 	offset = int(current_offset)
 	flag = 0
 
@@ -213,20 +215,18 @@ def run_pause(screen, current_volume, current_offset):
 	last_update_time = 0
 	key_update_delay = 80
 	action = "resume"
+	esc_hold_start = None
 
 	isRunning = True
 	while isRunning:
 		current_time = pg.time.get_ticks()
 		for ev in pg.event.get():
 			if(ev.type == pg.QUIT):
-				action = "quit"
-				isRunning = False
-				break
+				pg.quit()
+				sys.exit()
 			elif(ev.type == pg.KEYDOWN):
 				if(ev.key == pg.K_ESCAPE):
-					action = "resume"
-					isRunning = False
-					break
+					esc_hold_start = pg.time.get_ticks()
 				elif(ev.key == pg.K_DOWN):
 					button_border_clear(screen,last_rect)
 					flag = min(4,flag+1)
@@ -244,6 +244,12 @@ def run_pause(screen, current_volume, current_offset):
 						action = "quit"
 					isRunning = False
 					break
+			elif(ev.type == pg.KEYUP and ev.key == pg.K_ESCAPE):
+				if esc_hold_start is not None and pg.time.get_ticks() - esc_hold_start < 2000:
+					action = "resume"
+					isRunning = False
+					break
+				esc_hold_start = None
 		if(current_time - last_update_time > key_update_delay):
 			keys = pg.key.get_pressed()
 			if keys[pg.K_RIGHT]:
@@ -253,6 +259,7 @@ def run_pause(screen, current_volume, current_offset):
 					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 					if pg.mixer.get_init():
 						pg.mixer.music.set_volume(volume/100)
+					shared_state.MASTER_VOLUME = volume / 100.0
 				elif(flag == 1):
 					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
 					offset = min(1000,offset+10)
@@ -264,15 +271,24 @@ def run_pause(screen, current_volume, current_offset):
 					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 					if pg.mixer.get_init():
 						pg.mixer.music.set_volume(volume/100)
+					shared_state.MASTER_VOLUME = volume / 100.0
 				elif(flag == 1):
 					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
 					offset = max(-1000,offset-10)
 					slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 			last_update_time = current_time
+		keys = pg.key.get_pressed()
+		if keys[pg.K_ESCAPE] and esc_hold_start is not None:
+			if pg.time.get_ticks() - esc_hold_start >= 2000:
+				pg.quit()
+				sys.exit()
+		elif not keys[pg.K_ESCAPE]:
+			esc_hold_start = None
 
 		pg.display.update()
 		clock.tick(60)
 
+	shared_state.MASTER_VOLUME = volume / 100.0
 	return action, volume/100.0, offset
 
 pg.init()

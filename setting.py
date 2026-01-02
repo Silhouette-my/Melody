@@ -1,4 +1,6 @@
 import pygame as pg
+import shared_state
+import sys
 
 
 def _draw_text_centered(screen, font, text, center):
@@ -18,20 +20,45 @@ def _button_border_draw(screen, text_rect, select_flag):
     return last_rect
 
 
+def _draw_volume_row(screen, font, label, volume, center):
+    width, _ = screen.get_size()
+    value = max(0, min(100, int(round(volume * 100))))
+    label_image = font.render(label, True, "white")
+    value_image = font.render(str(value), True, "white")
+    gap_label_slider = 20
+    gap_slider_value = 12
+    min_slider_width = 160
+    max_slider_width = max(160, width // 3)
+    slider_width = max(min_slider_width, min(max_slider_width, width - 120 - label_image.get_width() - value_image.get_width()))
+    total_width = label_image.get_width() + gap_label_slider + slider_width + gap_slider_value + value_image.get_width()
+    start_x = int(center[0] - total_width / 2)
+    label_rect = label_image.get_rect()
+    label_rect.left = start_x
+    label_rect.centery = center[1]
+    slider_rect = pg.Rect(label_rect.right + gap_label_slider, label_rect.y, slider_width * value // 100, label_rect.height)
+    value_rect = value_image.get_rect()
+    value_rect.left = label_rect.right + gap_label_slider + slider_width + gap_slider_value
+    value_rect.centery = center[1]
+    screen.blit(label_image, label_rect)
+    pg.draw.rect(screen, "white", slider_rect)
+    screen.blit(value_image, value_rect)
+    return pg.Rect(start_x, label_rect.y, total_width, label_rect.height)
+
+
 def _render_menu(screen, font, small_font, volume, latency_ms, size_label, selected_index):
     screen.fill((0, 0, 0))
     width, height = screen.get_size()
     _draw_text_centered(screen, font, "Settings", (width // 2, height // 6))
 
     items = [
-        f"Master Volume: {int(volume * 100)}%",
         f"Latency Calibration: {latency_ms} ms",
         f"Screen Size: {size_label}",
         "Back",
     ]
     rects = []
     base_y = height // 2
-    for i, text in enumerate(items):
+    rects.append(_draw_volume_row(screen, font, "Master Volume", volume, (width // 2, base_y)))
+    for i, text in enumerate(items, start=1):
         rects.append(_draw_text_centered(screen, font, text, (width // 2, base_y + i * 60)))
     _draw_text_centered(
         screen,
@@ -47,8 +74,8 @@ def _run_latency_calibration(screen, font, small_font, clock, current_latency):
     width, height = screen.get_size()
     start_y = -30
     target_y = height - 140
-    travel_time = 1200
-    beat_interval = 600
+    travel_time = 900
+    beat_interval = 450
     num_beats = 6
     beep = None
     if not pg.mixer.get_init():
@@ -99,7 +126,7 @@ def _run_latency_calibration(screen, font, small_font, clock, current_latency):
                     return current_latency
                 if ev.key == pg.K_ESCAPE:
                     return current_latency
-                if ev.key == pg.K_SPACE and beat_index < num_beats and not waiting_for_result:
+                if ev.key in (pg.K_SPACE, pg.K_RETURN) and beat_index < num_beats and not waiting_for_result:
                     offset = now - beat_times[beat_index]
                     hits.append(offset)
                     beat_index += 1
@@ -148,7 +175,11 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
     small_font = pg.font.SysFont(None, 26)
 
     selected_index = 0
+    last_update_time = 0
+    key_update_delay = 80
+    esc_hold_start = None
 
+    master_volume = shared_state.MASTER_VOLUME
     if pg.mixer.get_init():
         pg.mixer.music.set_volume(master_volume)
 
@@ -156,21 +187,25 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
     while running:
         for ev in pg.event.get():
             if ev.type == pg.QUIT:
-                running = False
-                break
+                pg.quit()
+                sys.exit()
             if ev.type == pg.KEYDOWN:
                 if ev.key == pg.K_DOWN:
                     selected_index = min(selected_index + 1, 3)
                 elif ev.key == pg.K_UP:
                     selected_index = max(selected_index - 1, 0)
+                elif ev.key == pg.K_ESCAPE:
+                    esc_hold_start = pg.time.get_ticks()
                 elif ev.key == pg.K_LEFT and selected_index == 0:
-                    master_volume = max(0.0, master_volume - 0.05)
+                    master_volume = max(0.0, master_volume - 0.01)
                     if pg.mixer.get_init():
                         pg.mixer.music.set_volume(master_volume)
+                    shared_state.MASTER_VOLUME = master_volume
                 elif ev.key == pg.K_RIGHT and selected_index == 0:
-                    master_volume = min(1.0, master_volume + 0.05)
+                    master_volume = min(1.0, master_volume + 0.01)
                     if pg.mixer.get_init():
                         pg.mixer.music.set_volume(master_volume)
+                    shared_state.MASTER_VOLUME = master_volume
                 elif ev.key == pg.K_LEFT and selected_index == 2:
                     size_select = max(0, size_select - 1)
                     screen = pg.display.set_mode(screen_sizes[size_select])
@@ -183,6 +218,31 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
                     elif selected_index == 3:
                         running = False
                         break
+            if ev.type == pg.KEYUP and ev.key == pg.K_ESCAPE:
+                if esc_hold_start is not None and pg.time.get_ticks() - esc_hold_start < 2000:
+                    running = False
+                    break
+                esc_hold_start = None
+        if pg.time.get_ticks() - last_update_time > key_update_delay:
+            keys = pg.key.get_pressed()
+            if keys[pg.K_LEFT] and selected_index == 0:
+                master_volume = max(0.0, master_volume - 0.01)
+                if pg.mixer.get_init():
+                    pg.mixer.music.set_volume(master_volume)
+                shared_state.MASTER_VOLUME = master_volume
+            elif keys[pg.K_RIGHT] and selected_index == 0:
+                master_volume = min(1.0, master_volume + 0.01)
+                if pg.mixer.get_init():
+                    pg.mixer.music.set_volume(master_volume)
+                shared_state.MASTER_VOLUME = master_volume
+            last_update_time = pg.time.get_ticks()
+        keys = pg.key.get_pressed()
+        if keys[pg.K_ESCAPE] and esc_hold_start is not None:
+            if pg.time.get_ticks() - esc_hold_start >= 2000:
+                pg.quit()
+                sys.exit()
+        elif not keys[pg.K_ESCAPE]:
+            esc_hold_start = None
 
         size_label = f"{screen_sizes[size_select][0]}x{screen_sizes[size_select][1]}"
         _render_menu(screen, font, small_font, master_volume, latency_ms, size_label, selected_index)
