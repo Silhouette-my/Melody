@@ -121,46 +121,59 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
     for i in range(0,4,1):
         j = 0
         while j < len(rect_note_current[i]):
+            # 安全检查
+            if j >= len(rect_note_current[i]):
+                break
+                
             rect_note = rect_note_current[i][j]
             note_time = note_current[i][j]
-            if(rect_note.y <= s_height):
+            
+            if rect_note.y <= s_height:
                 time_diff = note_time - current_time
-                pg.draw.rect(screen, (30, 30, 30), rect_note, 0) #用背景色色矩形覆盖上一次显示的白色矩形
-                if(rect_note.height > 10):
-                    if(note_duration_time[i] > 0):
-                        long_note_ended = long_note_height_change(i,j,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,start_time,fall_speed)
-                        if long_note_ended:
-                            # 长条结束，从队列中移除
-                            del note_current[i][j]
-                            del rect_note_current[i][j]
-                            note_duration_time[i] = 0
-                            column_lock_clock[i] = 0
-                            column_statement[i] = 1
-                            continue  # 跳过后续渲染和j的增加
+                
+                # 清除旧位置
+                pg.draw.rect(screen, (30, 30, 30), rect_note, 0)
+                
+                if rect_note.height > 10 and note_duration_time[i] > 0 and j == 0:
+                    # 处理被按下的长条
+                    # 计算从按压开始到现在的总时间
+                    elapsed_press_time = current_time - column_lock_clock[i]
+                    column_lock_clock[i] = current_time
+                    new_rect, ended = long_note_height_change(i, rect_note, elapsed_press_time, fall_speed)
+                    
+                    if ended:
+                        # 长条结束
+                        del note_current[i][j]
+                        del rect_note_current[i][j]
+                        note_duration_time[i] = 0
+                        column_lock_clock[i] = 0
+                        column_statement[i] = 1
+                        continue
                     else:
-                        rect_note.y = (s_height-100)-rect_note.height-time_diff*fall_speed
+                        # 更新长条
+                        rect_note_current[i][j] = new_rect
+                        rect_note = new_rect
                 else:
-                    rect_note.y = (s_height-100)-rect_note.height-time_diff*fall_speed
-                if(time_diff >= -s_height/fall_speed): #只渲染会出现在屏幕里的note,且在其出现前就预渲染好(避免长条渲染出错)
-                    pg.draw.rect(screen,'white',rect_note,0)
+                    # 普通音符或未被按下的长条
+                    rect_note.y = (s_height - 100) - rect_note.height - time_diff * fall_speed
+                
+                # 绘制
+                if time_diff >= -s_height/fall_speed:
+                    pg.draw.rect(screen, 'white', rect_note, 0)
+                
                 j += 1
-            elif(rect_note.y > s_height):
-                if(rect_note.height == 10):
-                    rank_level_judge[3] += 1
-                    combo = 0
-                    display_text = 'miss'
-                    text_display_start_time = current_time					
-                # 音符已过判定线，检查是否是长条
-                elif(rect_note.height > 10 and note_duration_time[i] > 0):
-                    # 长条未完成，判定为miss
+            else:
+                # 音符已超出屏幕
+                if rect_note.height > 10 and note_duration_time[i] > 0:
                     rank_level_judge[3] += 1
                     combo = 0
                     display_text = 'miss'
                     text_display_start_time = current_time
+                
                 del note_current[i][j]
                 del rect_note_current[i][j]
-                # 如果删除的是长条，重置相关状态
-                if(rect_note.height > 10):
+                
+                if rect_note.height > 10:
                     note_duration_time[i] = 0
                     column_lock_clock[i] = 0
                     column_statement[i] = 1
@@ -170,36 +183,41 @@ def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,cur
     global display_text, text_display_start_time, combo, score, max_combo
     # 检查是否在窗口期内，如果是则保持原有文字不改变
     current_display_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
+    text_change = True
     if display_text is not None and (current_display_time - text_display_start_time) < TEXT_WINDOW_PERIOD:
-        return  # 窗口期内不改变文字
+        text_change = False  # 窗口期内不改变文字
     if(judge_time_diff <= 50/1000):
         rank_level_judge[0] += 1
         combo += 1
         score += judge_weight[0] + combo * 10  # 计算perfect分数
         pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
-        display_text = 'perfect'
-        text_display_start_time = current_display_time
+        if text_change:
+            display_text = 'perfect'
+            text_display_start_time = current_display_time
     elif(judge_time_diff <= 80/1000):
         rank_level_judge[1] += 1
         combo += 1
         score += judge_weight[1] + combo * 5  # 计算good分数
         pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
-        display_text = 'good'
-        text_display_start_time = current_display_time
+        if text_change:
+            display_text = 'good'
+            text_display_start_time = current_display_time
     elif(judge_time_diff <= 120/1000):
         rank_level_judge[2] += 1
         combo = 0
         score += judge_weight[2]  # 计算bad分数
         pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
-        display_text = 'bad'
-        text_display_start_time = current_display_time
+        if text_change:
+            display_text = 'bad'
+            text_display_start_time = current_display_time
     else:
         rank_level_judge[3] += 1
         combo = 0
         score += judge_weight[3]  # 计算miss分数
         pg.draw.rect(screen,(30, 30, 30),rect_note_current[key_use][0],0)
-        display_text = 'miss'
-        text_display_start_time = current_display_time
+        if text_change:
+            display_text = 'miss'
+            text_display_start_time = current_display_time
     
     # 更新最大连击数
     if combo > max_combo:
@@ -253,28 +271,28 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
                 column_statement[key_use] = 1
 #
 
-def long_note_height_change(key_use,label,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,start_time,fall_speed):
-    current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
-    if(rect_note_current[key_use][label].height > 10):
-        press_time = current_time - column_lock_clock[key_use]
-        height_reduced = press_time * fall_speed
-        original_height = rect_note_current[key_use][label].height
-        rect_note_current[key_use][label].height = max(10, rect_note_current[key_use][label].height - height_reduced)
-        height_change = original_height - rect_note_current[key_use][label].height
-        rect_note_current[key_use][label].y += height_change
-        for j in range(label + 1, len(rect_note_current[key_use])):
-            rect_note_current[key_use][j].y += height_change
-        
-        column_lock_clock[key_use] = current_time
-        column_statement[key_use] = 1
-        # 检查长条是否结束（高度<=10）
-        if rect_note_current[key_use][label].height <= 10:
-            # 长条结束，准备清理
-            return True
-    elif rect_note_current[key_use][label].height <= 10:
-        # 长条已经结束
-        return True
-    return False
+def long_note_height_change(col_idx, rect_note, elapsed_press_time, fall_speed):
+    if rect_note.height <= 10:
+        return None, True  # 已经结束
+    
+    # 计算总缩短高度
+    total_height_reduced = elapsed_press_time * fall_speed
+    
+    # 创建新rect
+    new_rect = rect_note.copy()
+    original_bottom = rect_note.y + rect_note.height
+    
+    # 计算新高度
+    new_height = max(10, rect_note.height - total_height_reduced)
+    
+    # 更新新rect
+    new_rect.height = new_height
+    new_rect.y = original_bottom - new_height  # 保持底部不变
+    
+    # 检查是否结束
+    ended = new_height <= 10
+    
+    return new_rect, ended
 #
 
 def text_draw(screen):
@@ -359,6 +377,17 @@ def draw_score_display(screen):
         screen.blit(acc_text, (20, 180))
 #
 
+def reset_game_state():
+    """重置所有游戏状态变量"""
+    global display_text, combo, text_display_start_time, score, max_combo, rank_level_judge
+    
+    display_text = None
+    combo = 0
+    text_display_start_time = 0
+    score = 0
+    max_combo = 0
+    rank_level_judge = [0, 0, 0, 0]
+
 def draw_progress_bar(screen, current_time, total_time, music_duration=None):
     """绘制进度条"""
     s_width = pg.Surface.get_width(screen)
@@ -424,10 +453,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     global beat_delta, start_time, rank_level_judge, score, max_combo, combo, time_offset_sec
     
     # 重置分数相关全局变量
-    score = 0
-    max_combo = 0
-    combo = 0
-    rank_level_judge = [0, 0, 0, 0]
+    reset_game_state()
     
     note_storage = list()
     list_space_initialize(note_storage,4)
