@@ -65,4 +65,4 @@
 * `setting.py`：设置与延迟校准
 * `pause_interface.py`：暂停界面
 * `play_interface_version2_final_version.py`：游戏主逻辑
-  **Tip**：修改流速请在`play_interface_version2_final_version.py`中搜索fall_speed自行更改
+***Tip**：修改流速请在`play_interface_version2_final_version.py`中搜索fall_speed自行更改
