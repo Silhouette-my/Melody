@@ -152,7 +152,6 @@ def main():
         elif state == STATE_PLAY:
             # 调用游戏逻辑 前往 play_interface
             master_volume = shared_state.MASTER_VOLUME
-            get_content = None
             with open(selected_song,'r') as f:
                 get_content = json.load(f)
                 note_file = get_content['note']
@@ -163,6 +162,12 @@ def main():
                 master_volume = pygame.mixer.music.get_volume()
                 shared_state.MASTER_VOLUME = master_volume
             if result == "restart":
+                with open(selected_song,'r') as f:
+                    data = json.load(f)
+                    length_temp = len(data['note'])
+                    data['note'][length_temp-1]['offset'] = new_local_offset
+                with open(selected_song,'w') as f:
+                    json.dump(data,f)
                 local_offset = new_local_offset
                 continue
             pygame.init()
