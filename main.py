@@ -175,8 +175,9 @@ def main():
             font = pygame.font.SysFont(None, 50)
             if pygame.mixer.get_init():
                 pygame.mixer.music.set_volume(master_volume)
-            state = STATE_RESULT
+            state = STATE_SELECT
 
+        #STATE_RESULT可删/留着做标准结果呈现界面
         elif state == STATE_RESULT:
             # 简单结果界面
             font = pygame.font.SysFont(None, 50)
