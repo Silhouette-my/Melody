@@ -164,11 +164,10 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
                 j += 1
             else:
                 # 音符已超出屏幕
-                if rect_note.height > 10 and note_duration_time[i] > 0:
-                    rank_level_judge[3] += 1
-                    combo = 0
-                    display_text = 'miss'
-                    text_display_start_time = current_time
+                rank_level_judge[3] += 1
+                combo = 0
+                display_text = 'miss'
+                text_display_start_time = current_time
                 
                 del note_current[i][j]
                 del rect_note_current[i][j]
