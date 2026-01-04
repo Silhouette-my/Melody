@@ -47,12 +47,26 @@ def text_replace(screen,last_rect):
 pg.init()
 root = os.getcwd()
 path = os.listdir(root)
-file_play = list()
-title_song = list()
+
+file_play = []
+title_song = []
+
 for p in path:
-	type_file = os.path.splitext(p)
-	if(type_file[1] == '.json'):
-		file_play.append(p)
+    type_file = os.path.splitext(p)
+    if type_file[1] == '.json':
+        try:
+            with open(p, 'r', encoding='utf-8') as file:
+                get_content = js.load(file)
+            title = get_content.get('meta', {}).get('song', {}).get('title')
+            if title:
+                file_play.append(p)
+                title_song.append(title)
+            else:
+                print(f"⚠️ 跳过无标题文件: {p}")
+        except Exception as e:
+            print(f"⚠️ 跳过解析失败文件: {p}, 错误: {e}")
+
+print(f"✅ 成功加载 {len(title_song)} 首曲目")
 #这部分是搜寻Melody这个文件夹下的.json文件并保存到file_play列表里面
 #
 for i in range(0,len(file_play),1):
@@ -102,7 +116,6 @@ if __name__ == "__main__":
 		attention_draw(screen,screen_size,size_select)
 		pg.display.update() #更新屏幕
 		clock.tick(60) #两次循环间隔(等价于60帧,保证按键有不响应期)
-	
 	
 	pg.quit()
 	#主程序
