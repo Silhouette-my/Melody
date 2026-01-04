@@ -521,7 +521,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
 
         now_ms = pg.time.get_ticks()
         if resume_metronome_active:
-            start_time = pg.time.get_ticks()/1000.0 - time_offset_sec - freeze_elapsed
+            start_time = pg.time.get_ticks()/1000.0 + time_offset_sec - freeze_elapsed
             if metronome_sound is not None:
                 if now_ms - resume_start_ms >= resume_beat_index * beat_interval_ms and resume_beat_index < resume_total_beats:
                     metronome_sound.play()
