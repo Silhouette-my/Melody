@@ -60,7 +60,8 @@
 ## 文件结构
 
 * `main.py`：主流程与场景切换
+* `main_interface.py`：主界面
 * `song_selection.py`：选曲逻辑
 * `setting.py`：设置与延迟校准
 * `pause_interface.py`：暂停界面
-* `play_interface_version2_no_text.py`：游戏主逻辑（无判定文字版）
+* `play_interface_version2_final_version.py`：游戏主逻辑
