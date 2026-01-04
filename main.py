@@ -8,7 +8,7 @@ import sys
 import main_interface       # 主菜单
 import song_selection       # 选曲界面
 import setting              # 设置
-import play_interface_version2_no_text as play  # ?????no_text?
+import play_interface_version2_final_version as play  # ?????no_text?
 import shared_state
 
 # ======================
