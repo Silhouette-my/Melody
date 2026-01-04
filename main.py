@@ -30,6 +30,7 @@ def main():
     selected_song = None
     master_volume = 1.0
     current_latency = 0
+    local_offset = 0
     screen_size = (800, 600)
     if pygame.mixer.get_init():
         pygame.mixer.music.set_volume(master_volume)
@@ -151,11 +152,12 @@ def main():
         elif state == STATE_PLAY:
             # 调用游戏逻辑 前往 play_interface
             master_volume = shared_state.MASTER_VOLUME
-            result = play.run_game(selected_song, master_volume, current_latency, screen_size)
+            result,new_local_offset = play.run_game(selected_song, master_volume, current_latency, local_offset, screen_size)
             if pygame.mixer.get_init():
                 master_volume = pygame.mixer.music.get_volume()
                 shared_state.MASTER_VOLUME = master_volume
             if result == "restart":
+                local_offset = new_local_offset
                 continue
             pygame.init()
             screen = pygame.display.set_mode(screen_size)
