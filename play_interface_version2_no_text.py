@@ -359,7 +359,7 @@ def draw_score_display(screen):
         screen.blit(acc_text, (20, 180))
 #
 
-def run_game(file_path=None, master_volume=1.0, current_latency=0, screen_size=None):
+def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset = 0, screen_size=None):
     global beat_delta, start_time, rank_level_judge, score, max_combo, combo, time_offset_sec
     
     # 重置分数相关全局变量
@@ -387,7 +387,6 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, screen_size=N
     last_time = 0
     lock_time = 0
     fall_speed = 650
-    local_offset = 0
     final_offset_ms = current_latency + local_offset
     time_offset_sec = final_offset_ms / 1000.0
     offset = final_offset_ms
@@ -504,10 +503,11 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, screen_size=N
                     resume_start_ms = pg.time.get_ticks()
                     resume_beat_index = 0
                     if action == "quit":
+                        return None,0
                         isRunning = False
                         break
                     if action == "restart":
-                        return "restart"
+                        return "restart",local_offset
             if(ev.type == pg.KEYDOWN):
                 note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
             if(ev.type == pg.KEYUP):
