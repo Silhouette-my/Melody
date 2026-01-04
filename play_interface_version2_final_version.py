@@ -400,7 +400,7 @@ def draw_progress_bar(screen, current_time, total_time, music_duration=None):
     
     # 如果没有提供总时长，使用最后一个音符的时间计算
     if total_time <= 0:
-        return
+        return True
     
     # 计算进度百分比
     progress = min(1.0, max(0.0, current_time / total_time))
@@ -444,7 +444,11 @@ def draw_progress_bar(screen, current_time, total_time, music_duration=None):
     percent_rect = percent_surface.get_rect()
     percent_rect.right = bar_x + bar_width - 5
     percent_rect.top = bar_y - 12
-    
+
+    if(progress >= 1.0):
+        return True
+    elif(progress <1.0):
+        return False
     screen.blit(percent_surface, percent_rect)
 #
 
@@ -472,7 +476,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     note_duration_time = [0,0,0,0]
     last_time = 0
     lock_time = 0
-    fall_speed = 650
+    fall_speed = 750
     final_offset_ms = current_latency + local_offset
     time_offset_sec = final_offset_ms / 1000.0
     offset = final_offset_ms
@@ -501,7 +505,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     elif file_play:
         file_choose = file_play[0]
     else:
-        return
+        return None,0
     with open(file_choose,'r',encoding = 'utf-8') as file:
         get_content = js.load(file)
     bpm = get_content['time'][0]['bpm'] #提取bpm信息
@@ -582,6 +586,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     resume_total_beats = 8
     freeze_elapsed = None
     isEnd = False
+    isProgressEnd = False
 
     while isRunning:
         for ev in pg.event.get():
@@ -648,7 +653,10 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         
         # 绘制进度条
         current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
-        draw_progress_bar(screen, current_time, total_time)
+        if(not isProgressEnd):
+            isProgressEnd = draw_progress_bar(screen, current_time, total_time)
+        else:
+            isProgressEnd = draw_progress_bar(screen,total_time,total_time)
         
         text_draw(screen)
 
