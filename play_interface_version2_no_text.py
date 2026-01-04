@@ -483,6 +483,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     resume_beat_index = 0
     resume_total_beats = 8
     freeze_elapsed = None
+    isEnd = False
 
     while isRunning:
         for ev in pg.event.get():
@@ -491,23 +492,28 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                 break
             if(ev.type == pg.KEYDOWN):
                 if(ev.key == pg.K_ESCAPE):
-                    freeze_elapsed = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
-                    if pg.mixer.get_init():
-                        pg.mixer.music.pause()
-                    action, master_volume, local_offset = pause_interface.run_pause(screen, master_volume, local_offset)
-                    if pg.mixer.get_init():
-                        pg.mixer.music.set_volume(master_volume)
-                    final_offset_ms = current_latency + local_offset
-                    time_offset_sec = final_offset_ms / 1000.0
-                    resume_metronome_active = True
-                    resume_start_ms = pg.time.get_ticks()
-                    resume_beat_index = 0
-                    if action == "quit":
+                    if(not isEnd):
+                        freeze_elapsed = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
+                        if pg.mixer.get_init():
+                            pg.mixer.music.pause()
+                        action, master_volume, local_offset = pause_interface.run_pause(screen, master_volume, local_offset)
+                        if pg.mixer.get_init():
+                            pg.mixer.music.set_volume(master_volume)
+                        final_offset_ms = current_latency + local_offset
+                        time_offset_sec = final_offset_ms / 1000.0
+                        resume_metronome_active = True
+                        resume_start_ms = pg.time.get_ticks()
+                        resume_beat_index = 0
+                        if action == "quit":
+                            return None,0
+                            isRunning = False
+                            break
+                        if action == "restart":
+                            return "restart",local_offset
+                    elif(isEnd):
                         return None,0
                         isRunning = False
                         break
-                    if action == "restart":
-                        return "restart",local_offset
             if(ev.type == pg.KEYDOWN):
                 note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
             if(ev.type == pg.KEYUP):
@@ -547,6 +553,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         if(not(end_judge(note,note_read_sp) and len(note_current))):
             last_time = rank_check(rank_level_judge,last_time,start_time)
         elif(isDoing == True):
+            isEnd = True
             print(len(note)-1)
             combo = 0
             isDoing = False
