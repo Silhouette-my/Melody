@@ -27,6 +27,7 @@ def main():
     screen = pygame.display.set_mode((800, 600))
     font = pygame.font.SysFont(None, 50)
     state = STATE_MENU
+    title_flag = 0
     selected_song = None
     master_volume = 1.0
     current_latency = 0
@@ -92,7 +93,6 @@ def main():
         elif state == STATE_SELECT:
             # 调用选曲界面    
             clock = pygame.time.Clock()
-            title_flag = 0
             running = True
             esc_hold_start = None
             esc_short_action = None
