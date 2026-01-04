@@ -359,6 +359,67 @@ def draw_score_display(screen):
         screen.blit(acc_text, (20, 180))
 #
 
+def draw_progress_bar(screen, current_time, total_time, music_duration=None):
+    """绘制进度条"""
+    s_width = pg.Surface.get_width(screen)
+    s_height = pg.Surface.get_height(screen)
+    
+    # 进度条位置和尺寸
+    bar_height = 8
+    bar_y = s_height - 20  # 距离底部20像素
+    bar_width = s_width - 40  # 左右各留20像素边距
+    bar_x = 20
+    
+    # 如果没有提供总时长，使用最后一个音符的时间计算
+    if total_time <= 0:
+        return
+    
+    # 计算进度百分比
+    progress = min(1.0, max(0.0, current_time / total_time))
+    
+    # 绘制进度条背景
+    pg.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_width, bar_height), 0)
+    
+    # 绘制进度条前景
+    fill_width = int(bar_width * progress)
+    if fill_width > 0:
+        # 使用渐变色：从绿色到橙色
+        color = (
+            int(255 * (1 - progress) + 0 * progress),  # 红色分量
+            int(255 * (1 - progress) + 165 * progress),  # 绿色分量
+            0  # 蓝色分量
+        )
+        pg.draw.rect(screen, color, (bar_x, bar_y, fill_width, bar_height), 0)
+    
+    # 绘制进度条边框
+    pg.draw.rect(screen, (150, 150, 150), (bar_x, bar_y, bar_width, bar_height), 1)
+    
+    # 绘制当前时间和总时间文本
+    time_font = pg.font.SysFont(None, 16)
+    
+    # 格式化时间显示 (分钟:秒)
+    current_min = int(current_time) // 60
+    current_sec = int(current_time) % 60
+    total_min = int(total_time) // 60
+    total_sec = int(total_time) % 60
+    
+    time_text = f"{current_min}:{current_sec:02d} / {total_min}:{total_sec:02d}"
+    time_surface = time_font.render(time_text, True, (255, 255, 255))
+    time_rect = time_surface.get_rect()
+    time_rect.center = (s_width // 2, bar_y - 10)  # 在进度条上方居中显示
+    
+    screen.blit(time_surface, time_rect)
+    
+    # 绘制进度百分比
+    percent_text = f"{progress * 100:.1f}%"
+    percent_surface = time_font.render(percent_text, True, (200, 200, 255))
+    percent_rect = percent_surface.get_rect()
+    percent_rect.right = bar_x + bar_width - 5
+    percent_rect.top = bar_y - 12
+    
+    screen.blit(percent_surface, percent_rect)
+#
+
 def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset = 0, screen_size=None):
     global beat_delta, start_time, rank_level_judge, score, max_combo, combo, time_offset_sec
     
@@ -472,6 +533,18 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     first_arrival_time = first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta,offset)
     note_time_initialize(note_storage,note,screen)
     note_rect_initialize(note,rect_note_storage,screen,column_note_positions,beat_delta,fall_speed)
+    
+    # 计算总时间（基于最后一个音符）
+    # 找到所有轨道中最后一个音符的时间
+    last_note_time = 0
+    for column in note_storage:
+        if column:
+            column_max = max(column)
+            if column_max > last_note_time:
+                last_note_time = column_max
+    
+    # 计算总时间：最后一个音符出现的时间 + 下落时间 + 2秒缓冲
+    total_time = last_note_time + (s_height-100)/fall_speed + 2.0
 
     clock = pg.time.Clock()	#计时器
     isRunning = True
@@ -547,6 +620,10 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         
         # 绘制左上角记分器
         draw_score_display(screen)
+        
+        # 绘制进度条
+        current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
+        draw_progress_bar(screen, current_time, total_time)
         
         text_draw(screen)
 
