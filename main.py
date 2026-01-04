@@ -152,6 +152,12 @@ def main():
         elif state == STATE_PLAY:
             # 调用游戏逻辑 前往 play_interface
             master_volume = shared_state.MASTER_VOLUME
+            get_content = None
+            with open(selected_song,'r') as f:
+                get_content = json.load(f)
+                note_file = get_content['note']
+                length_temp = len(note_file)
+                local_offset = note_file[length_temp-1]['offset']
             result,new_local_offset = play.run_game(selected_song, master_volume, current_latency, local_offset, screen_size)
             if pygame.mixer.get_init():
                 master_volume = pygame.mixer.music.get_volume()
