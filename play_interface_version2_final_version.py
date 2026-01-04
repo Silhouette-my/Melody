@@ -330,7 +330,7 @@ def draw_score_display(screen):
     global score, combo, max_combo, rank_level_judge
     
     s_width = pg.Surface.get_width(screen)
-    score_font = pg.font.SysFont(None, 16)
+    score_font = pg.font.SysFont(None, 20)
     
     # 绘制分数显示
     score_text = score_font.render(f'Score: {score}', True, (255, 255, 255))
