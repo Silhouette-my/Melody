@@ -505,7 +505,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     elif file_play:
         file_choose = file_play[0]
     else:
-        return None,0
+        return None, local_offset
     with open(file_choose,'r',encoding = 'utf-8') as file:
         get_content = js.load(file)
     bpm = get_content['time'][0]['bpm'] #提取bpm信息
@@ -587,6 +587,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     freeze_elapsed = None
     isEnd = False
     isProgressEnd = False
+    end_start_ms = None
 
     while isRunning:
         for ev in pg.event.get():
@@ -608,13 +609,13 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                         resume_start_ms = pg.time.get_ticks()
                         resume_beat_index = 0
                         if action == "quit":
-                            return None,0
+                            return None, local_offset
                             isRunning = False
                             break
                         if action == "restart":
                             return "restart",local_offset
                     elif(isEnd):
-                        return None,0
+                        return None, local_offset
                         isRunning = False
                         break
             if(ev.type == pg.KEYDOWN):
@@ -667,7 +668,28 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
             print(len(note)-1)
             combo = 0
             isDoing = False
+            end_start_ms = pg.time.get_ticks()
 
+        if isEnd and end_start_ms is not None:
+            if pg.time.get_ticks() - end_start_ms >= 1000:
+                total_hits = sum(rank_level_judge)
+                if total_hits > 0:
+                    accuracy = (rank_level_judge[0] + rank_level_judge[1] * 0.5) / total_hits * 100
+                else:
+                    accuracy = 0.0
+                if pg.mixer.get_init():
+                    pg.mixer.music.stop()
+                result = {
+                    'title': title_song,
+                    'score': score,
+                    'max_combo': max_combo,
+                    'perfect': rank_level_judge[0],
+                    'good': rank_level_judge[1],
+                    'bad': rank_level_judge[2],
+                    'miss': rank_level_judge[3],
+                    'accuracy': accuracy,
+                }
+                return result, local_offset
         pg.display.update()
         clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
 

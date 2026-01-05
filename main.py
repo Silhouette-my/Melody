@@ -10,6 +10,7 @@ import song_selection       # 选曲界面
 import setting              # 设置
 import play_interface_version2_final_version as play  # ?????no_text?
 import shared_state
+import result
 
 # ======================
 # 1. 场景状态机
@@ -33,6 +34,7 @@ def main():
     current_latency = 0
     local_offset = 0
     screen_size = (800, 600)
+    result_data = None
     icon = pygame.image.load("icon.ico").convert_alpha()
     pygame.display.set_icon(icon)
     pygame.display.set_caption("Melody")
@@ -160,11 +162,11 @@ def main():
                 note_file = get_content['note']
                 length_temp = len(note_file)
                 local_offset = note_file[length_temp-1]['offset']
-            result,new_local_offset = play.run_game(selected_song, master_volume, current_latency, local_offset, screen_size)
+            result_out,new_local_offset = play.run_game(selected_song, master_volume, current_latency, local_offset, screen_size)
             if pygame.mixer.get_init():
                 master_volume = pygame.mixer.music.get_volume()
                 shared_state.MASTER_VOLUME = master_volume
-            if result == "restart":
+            if result_out == "restart":
                 with open(selected_song,'r') as f:
                     data = json.load(f)
                     length_temp = len(data['note'])
@@ -172,6 +174,11 @@ def main():
                 with open(selected_song,'w') as f:
                     json.dump(data,f)
                 local_offset = new_local_offset
+                continue
+            if isinstance(result_out, dict):
+                result_data = result_out
+                local_offset = new_local_offset
+                state = STATE_RESULT
                 continue
             pygame.init()
             screen = pygame.display.set_mode(screen_size)
@@ -182,39 +189,11 @@ def main():
 
         #STATE_RESULT可删/留着做标准结果呈现界面
         elif state == STATE_RESULT:
-            # 简单结果界面
-            font = pygame.font.SysFont(None, 50)
-            text = font.render("Game Over - Press Enter to return", True, 'white')
-            rect = text.get_rect(center=screen.get_rect().center)
-            screen.blit(text, rect)
-            pygame.display.update()
-            waiting = True
-            esc_hold_start = None
-            esc_short_action = None
-            while waiting:
-                for ev in pygame.event.get():
-                    if ev.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
-                    elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_RETURN:
-                        state = STATE_MENU
-                        waiting = False
-                    elif ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
-                        esc_hold_start = pygame.time.get_ticks()
-                        esc_short_action = "back"
-                    elif ev.type == pygame.KEYUP and ev.key == pygame.K_ESCAPE:
-                        if esc_hold_start is not None and pygame.time.get_ticks() - esc_hold_start < 2000:
-                            state = STATE_MENU
-                            waiting = False
-                        esc_hold_start = None
-                        esc_short_action = None
-                keys = pygame.key.get_pressed()
-                if keys[pygame.K_ESCAPE] and esc_hold_start is not None:
-                    if pygame.time.get_ticks() - esc_hold_start >= 2000:
-                        pygame.quit()
-                        sys.exit()
-                elif not keys[pygame.K_ESCAPE]:
-                    esc_hold_start = None
+            action = result.run_result(result_data or {}, screen_size)
+            if action == "retry":
+                state = STATE_PLAY
+            else:
+                state = STATE_SELECT
 
 if __name__ == "__main__":
     main()
