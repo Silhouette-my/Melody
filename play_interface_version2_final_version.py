@@ -505,7 +505,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     elif file_play:
         file_choose = file_play[0]
     else:
-        return None,0
+        return None, local_offset
     with open(file_choose,'r',encoding = 'utf-8') as file:
         get_content = js.load(file)
     bpm = get_content['time'][0]['bpm'] #提取bpm信息
@@ -530,14 +530,30 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         if(song_player_name[i] == title_song):
             pg.mixer.music.load(song_player[i]) 
             break
+    def build_result():
+        total_hits = sum(rank_level_judge)
+        if total_hits > 0:
+            accuracy = (rank_level_judge[0] + rank_level_judge[1] * 0.5) / total_hits * 100
+        else:
+            accuracy = 0.0
+        return {
+            'title': title_song,
+            'score': score,
+            'max_combo': max_combo,
+            'perfect': rank_level_judge[0],
+            'good': rank_level_judge[1],
+            'bad': rank_level_judge[2],
+            'miss': rank_level_judge[3],
+            'accuracy': accuracy,
+        }
 
     #
     if screen_size is None:
         screen_sizes = [(800,600),(1280,760),(1920,1080)] #??????
         size_select = 0 #????????(???????????????????????)
-        screen = pg.display.set_mode(screen_sizes[size_select])
+        screen = pg.display.set_mode(screen_sizes[size_select], pg.RESIZABLE)
     else:
-        screen = pg.display.set_mode(screen_size)
+        screen = pg.display.set_mode(screen_size, pg.RESIZABLE)
     #初始化窗口
 
     background = pg.Surface(screen.get_size())
@@ -587,15 +603,61 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     freeze_elapsed = None
     isEnd = False
     isProgressEnd = False
+    end_start_ms = None
+    esc_hold_start = None
+    auto_play_enabled = False
+    auto_play_msg = None
+    auto_play_msg_time = 0
+    auto_play_hold = [False, False, False, False]
 
     while isRunning:
         for ev in pg.event.get():
             if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
+                keys = pg.key.get_pressed()
+                if keys[pg.K_ESCAPE] and not isEnd:
+                    if esc_hold_start is None:
+                        esc_hold_start = pg.time.get_ticks()
+                    continue
                 isRunning = False
                 break
+            if ev.type == pg.VIDEORESIZE:
+                screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
+                background = pg.Surface(screen.get_size())
+                background.fill((30, 30, 30))
+                s_width = pg.Surface.get_width(screen)
+                s_height = pg.Surface.get_height(screen)
+                column_line_positions = [
+                    s_width/2-3*50,
+                    s_width/2-1*50,
+                    s_width/2+1*50,
+                    s_width/2+3*50,
+                    s_width/2+5*50
+                ]
+                column_note_positions = [
+                    s_width/2-3*50,
+                    s_width/2-1*50,
+                    s_width/2+1*50,
+                    s_width/2+3*50
+                ]
+                for col in range(0,4):
+                    for rect in rect_note_storage[col]:
+                        rect.centerx = column_note_positions[col]
+                    for rect in rect_note_current[col]:
+                        rect.centerx = column_note_positions[col]
+                    for rect in rect_upper_note_current[col]:
+                        rect.centerx = column_note_positions[col]
             if(ev.type == pg.KEYDOWN):
                 if(ev.key == pg.K_ESCAPE):
-                    if(not isEnd):
+                    if isEnd:
+                        return None, local_offset
+                    esc_hold_start = pg.time.get_ticks()
+                elif(ev.key == pg.K_q):
+                    auto_play_enabled = not auto_play_enabled
+                    auto_play_msg = "AUTO PLAY ON" if auto_play_enabled else "AUTO PLAY OFF"
+                    auto_play_msg_time = pg.time.get_ticks()
+            if(ev.type == pg.KEYUP and ev.key == pg.K_ESCAPE):
+                if esc_hold_start is not None:
+                    if pg.time.get_ticks() - esc_hold_start < 2000 and not isEnd:
                         freeze_elapsed = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
                         if pg.mixer.get_init():
                             pg.mixer.music.pause()
@@ -608,21 +670,26 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                         resume_start_ms = pg.time.get_ticks()
                         resume_beat_index = 0
                         if action == "quit":
-                            return None,0
+                            return None, local_offset
                             isRunning = False
                             break
                         if action == "restart":
                             return "restart",local_offset
-                    elif(isEnd):
-                        return None,0
-                        isRunning = False
-                        break
+                    elif not isEnd:
+                        if pg.mixer.get_init():
+                            pg.mixer.music.stop()
+                        return build_result(), local_offset
+                esc_hold_start = None
             if(ev.type == pg.KEYDOWN):
                 note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
             if(ev.type == pg.KEYUP):
                 note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
 
         now_ms = pg.time.get_ticks()
+        if esc_hold_start is not None and now_ms - esc_hold_start >= 2000 and not isEnd:
+            if pg.mixer.get_init():
+                pg.mixer.music.stop()
+            return build_result(), local_offset
         if resume_metronome_active:
             start_time = pg.time.get_ticks()/1000.0 + time_offset_sec - freeze_elapsed
             if metronome_sound is not None:
@@ -647,6 +714,20 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
 
         note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
+
+        if auto_play_enabled:
+            current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
+            for lane in range(0,4):
+                if auto_play_hold[lane]:
+                    if note_duration_time[lane] <= 0 or (current_time - column_lock_clock[lane]) >= note_duration_time[lane]:
+                        note_keyboard_judge(1, keyboard_map_use[lane], screen, column_statement, column_lock_clock, note_duration_time, note_current, rect_note_current, rect_upper_note_current, lock_time, start_time, fall_speed, rank_level_judge)
+                        auto_play_hold[lane] = False
+                    continue
+                if len(note_current[lane]) > 0:
+                    if abs(note_current[lane][0] - current_time) <= 0.02:
+                        note_keyboard_judge(0, keyboard_map_use[lane], screen, column_statement, column_lock_clock, note_duration_time, note_current, rect_note_current, rect_upper_note_current, lock_time, start_time, fall_speed, rank_level_judge)
+                        if note_duration_time[lane] > 0:
+                            auto_play_hold[lane] = True
         
         # 绘制左上角记分器
         draw_score_display(screen)
@@ -660,6 +741,16 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         
         text_draw(screen)
 
+        if auto_play_msg is not None:
+            if pg.time.get_ticks() - auto_play_msg_time <= 1000:
+                msg_font = pg.font.SysFont(None, 28)
+                msg_image = msg_font.render(auto_play_msg, True, (200, 200, 200))
+                msg_rect = msg_image.get_rect()
+                msg_rect.center = (s_width // 2, 24)
+                screen.blit(msg_image, msg_rect)
+            else:
+                auto_play_msg = None
+
         if(not(end_judge(note,note_read_sp) and len(note_current))):
             last_time = rank_check(rank_level_judge,last_time,start_time)
         elif(isDoing == True):
@@ -667,7 +758,13 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
             print(len(note)-1)
             combo = 0
             isDoing = False
+            end_start_ms = pg.time.get_ticks()
 
+        if isEnd and end_start_ms is not None:
+            if pg.time.get_ticks() - end_start_ms >= 1000:
+                if pg.mixer.get_init():
+                    pg.mixer.music.stop()
+                return build_result(), local_offset
         pg.display.update()
         clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
 

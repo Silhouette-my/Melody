@@ -203,6 +203,8 @@ def run_pause(screen, current_volume, current_offset):
 		if(size == pg.Surface.get_size(screen)):
 			font_size_use = font_size[i]
 			break
+	if font_size_use is None:
+		font_size_use = 40
 	font = pg.font.SysFont(None,font_size_use)
 	screen.fill((0, 0, 0))
 
@@ -232,6 +234,27 @@ def run_pause(screen, current_volume, current_offset):
 			if(ev.type == pg.QUIT):
 				pg.quit()
 				sys.exit()
+			elif(ev.type == pg.VIDEORESIZE):
+				screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
+				width = pg.Surface.get_width(screen)
+				height = pg.Surface.get_height(screen)
+				font_size_use = None
+				for i in range(0,3,1):
+					size = screen_sizes[i]
+					if(size == pg.Surface.get_size(screen)):
+						font_size_use = font_size[i]
+						break
+				font = pg.font.SysFont(None,font_size_use or 40)
+				screen.fill((0, 0, 0))
+				coordinate_text_use = list()
+				rect_text_use = list()
+				slider_volume_rect = list()
+				slider_offset_rect = list()
+				coordinate_calculate(width,height,font,coordinate_text_use)
+				text_draw(screen,font,text_use,coordinate_text_use,rect_text_use)
+				slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+				slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+				last_rect = button_border_draw(screen,rect_text_use,flag)
 			elif(ev.type == pg.KEYDOWN):
 				if(ev.key == pg.K_ESCAPE):
 					esc_hold_start = pg.time.get_ticks()
@@ -313,6 +336,6 @@ offset = 0
 if __name__ == "__main__":
 	screen_size = [(800,600),(1280,760),(1920,1080)] #??????????????????
 	size_select = 1 #????????????????????????(?????????????????????????????????????????????????????????????????????)
-	screen = pg.display.set_mode(screen_size[size_select])
+	screen = pg.display.set_mode(screen_size[size_select], pg.RESIZABLE)
 	run_pause(screen, 0.5, 0)
 	pg.quit()

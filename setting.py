@@ -169,7 +169,7 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
         size_select = screen_sizes.index(screen_size)
     else:
         size_select = 0
-    screen = pg.display.set_mode(screen_sizes[size_select])
+    screen = pg.display.set_mode(screen_sizes[size_select], pg.RESIZABLE)
     clock = pg.time.Clock()
     font = pg.font.SysFont(None, 50)
     small_font = pg.font.SysFont(None, 26)
@@ -189,6 +189,8 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
             if ev.type == pg.QUIT:
                 pg.quit()
                 sys.exit()
+            if ev.type == pg.VIDEORESIZE:
+                screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
             if ev.type == pg.KEYDOWN:
                 if ev.key == pg.K_DOWN:
                     selected_index = min(selected_index + 1, 3)
@@ -208,10 +210,10 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
                     shared_state.MASTER_VOLUME = master_volume
                 elif ev.key == pg.K_LEFT and selected_index == 2:
                     size_select = max(0, size_select - 1)
-                    screen = pg.display.set_mode(screen_sizes[size_select])
+                    screen = pg.display.set_mode(screen_sizes[size_select], pg.RESIZABLE)
                 elif ev.key == pg.K_RIGHT and selected_index == 2:
                     size_select = min(len(screen_sizes) - 1, size_select + 1)
-                    screen = pg.display.set_mode(screen_sizes[size_select])
+                    screen = pg.display.set_mode(screen_sizes[size_select], pg.RESIZABLE)
                 elif ev.key == pg.K_RETURN:
                     if selected_index == 1:
                         latency_ms = _run_latency_calibration(screen, font, small_font, clock, latency_ms)

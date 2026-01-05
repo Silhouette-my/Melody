@@ -79,7 +79,8 @@ for i in range(0,len(file_play),1):
 if __name__ == "__main__":
 	screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
 	size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
-	screen = pg.display.set_mode(screen_size[size_select])
+	current_size = screen_size[size_select]
+	screen = pg.display.set_mode(current_size, pg.RESIZABLE)
 	#初始化窗口
 	#
 	clock = pg.time.Clock()	#计时器
@@ -88,7 +89,7 @@ if __name__ == "__main__":
 	font = pg.font.SysFont(None,50) #字体数据初始化
 	#要用的变量初始化
 	#
-	last_rect[0] = text_draw(title_flag,font,screen_size,size_select) #绘制曲目列表内第一首歌的标题
+	last_rect[0] = text_draw(title_flag,font,current_size,size_select) #绘制曲目列表内第一首歌的标题
 	#
 	#
 	isRunning = True
@@ -100,20 +101,25 @@ if __name__ == "__main__":
 			if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
 				isRunning = False
 				break
+			elif(ev.type == pg.VIDEORESIZE):
+				current_size = ev.size
+				screen = pg.display.set_mode(current_size, pg.RESIZABLE)
+				screen.fill((0, 0, 0))
+				last_rect[0] = text_draw(title_flag,font,current_size,size_select)
 			elif(ev.type == pg.KEYDOWN): #按向下键时显示下一个曲目
 				if(ev.key == pg.K_DOWN and bool_down):
 					if(last_rect[0] != (0,0)): #判断上一次是否绘制了标题，如果绘制就先覆盖掉它
 						text_replace(screen,last_rect[0])
 					title_flag += 1
-					last_rect[0] = text_draw(title_flag,font,screen_size,size_select)
+					last_rect[0] = text_draw(title_flag,font,current_size,size_select)
 					break
 				elif(ev.key == pg.K_UP and bool_up): #按向上键时显示上一个曲目
 					if(last_rect[0] != (0,0)):
 						text_replace(screen,last_rect[0])
 					title_flag -= 1
-					last_rect[0] = text_draw(title_flag,font,screen_size,size_select)
+					last_rect[0] = text_draw(title_flag,font,current_size,size_select)
 					break
-		attention_draw(screen,screen_size,size_select)
+		attention_draw(screen,current_size,size_select)
 		pg.display.update() #更新屏幕
 		clock.tick(60) #两次循环间隔(等价于60帧,保证按键有不响应期)
 	
