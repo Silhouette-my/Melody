@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-# 引入你已有的模块
+# 引入已有的模块
 import main_interface       # 主菜单
 import song_selection       # 选曲界面
 import setting              # 设置
@@ -149,6 +149,7 @@ def main():
             if pygame.mixer.get_init():
                 pygame.mixer.music.set_volume(master_volume)
             state = STATE_MENU
+        
         elif state == STATE_PLAY:
             # 调用游戏逻辑 前往 play_interface
             master_volume = shared_state.MASTER_VOLUME
