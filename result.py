@@ -2,8 +2,8 @@ import pygame as pg
 import sys
 
 
-def _draw_text_centered(screen, font, text, center):
-    image = font.render(text, True, "white")
+def _draw_text_centered(screen, font, text, center, color="white"):
+    image = font.render(text, True, color)
     rect = image.get_rect(center=center)
     screen.blit(image, rect)
     return rect
@@ -17,10 +17,46 @@ def _draw_option_border(screen, rects, index):
     pg.draw.rect(screen, "white", pg.Rect(border_x, border_y, border_w, border_h), 1)
 
 
+def _grade_from_accuracy(accuracy):
+    if accuracy >= 98.0:
+        return "S"
+    if accuracy >= 95.0:
+        return "A"
+    if accuracy >= 90.0:
+        return "B"
+    if accuracy >= 80.0:
+        return "C"
+    return "D"
+
+
+def _grade_color(grade):
+    if grade == "S":
+        return (120, 220, 255)
+    if grade == "A":
+        return (120, 220, 120)
+    if grade == "B":
+        return (255, 210, 120)
+    if grade == "C":
+        return (255, 160, 120)
+    return (255, 120, 120)
+
+
+def _draw_vignette(screen, strength=110):
+    width, height = screen.get_size()
+    overlay = pg.Surface((width, height), pg.SRCALPHA)
+    max_radius = int(max(width, height) * 0.75)
+    center = (width // 2, height // 2)
+    for r in range(max_radius, 0, -40):
+        alpha = int(strength * (1 - r / max_radius))
+        pg.draw.circle(overlay, (0, 0, 0, alpha), center, r)
+    screen.blit(overlay, (0, 0))
+
+
 def run_result(result_data, screen_size):
     pg.init()
-    screen = pg.display.set_mode(screen_size)
-    title_font = pg.font.SysFont(None, 60)
+    screen = pg.display.set_mode(screen_size, pg.RESIZABLE)
+    title_font = pg.font.SysFont(None, 72)
+    grade_font = pg.font.SysFont(None, 120)
     font = pg.font.SysFont(None, 40)
     small_font = pg.font.SysFont(None, 24)
     clock = pg.time.Clock()
@@ -33,6 +69,7 @@ def run_result(result_data, screen_size):
     bad = result_data.get("bad", 0)
     miss = result_data.get("miss", 0)
     accuracy = result_data.get("accuracy", 0.0)
+    grade = _grade_from_accuracy(accuracy)
 
     options = ["Retry", "Back"]
     selected_index = 0
@@ -65,26 +102,32 @@ def run_result(result_data, screen_size):
         elif not keys[pg.K_ESCAPE]:
             esc_hold_start = None
 
-        screen.fill((0, 0, 0))
+        screen.fill((18, 18, 18))
+        _draw_vignette(screen)
         width, height = screen.get_size()
-        _draw_text_centered(screen, title_font, "Result", (width // 2, height // 6))
-        _draw_text_centered(screen, font, title, (width // 2, height // 6 + 50))
 
-        line_y = height // 2 - 80
-        _draw_text_centered(screen, font, f"Score: {score}", (width // 2, line_y))
-        _draw_text_centered(screen, font, f"Accuracy: {accuracy:.2f}%", (width // 2, line_y + 50))
-        _draw_text_centered(screen, font, f"Max Combo: {max_combo}", (width // 2, line_y + 100))
-        _draw_text_centered(
-            screen,
-            font,
-            f"P:{perfect}  G:{good}  B:{bad}  M:{miss}",
-            (width // 2, line_y + 150),
-        )
+        _draw_text_centered(screen, title_font, "RESULT", (width // 2, height // 7))
+        _draw_text_centered(screen, grade_font, grade, (width // 2, height // 3), _grade_color(grade))
+        _draw_text_centered(screen, font, f"SCORE: {score:,}", (width // 2, height // 3 + 90))
+
+        left_x = width // 2 - 220
+        right_x = width // 2 + 220
+        mid_y = height // 2 + 10
+
+        _draw_text_centered(screen, font, f"Max Combo: {max_combo}", (left_x, mid_y))
+        _draw_text_centered(screen, font, f"Accuracy: {accuracy:.1f}%", (left_x, mid_y + 50), (120, 220, 120))
+
+        _draw_text_centered(screen, font, f"Perfect: {perfect}", (right_x, mid_y - 10))
+        _draw_text_centered(screen, font, f"Great: {good}", (right_x, mid_y + 30))
+        _draw_text_centered(screen, font, f"Bad: {bad}", (right_x, mid_y + 70))
+        _draw_text_centered(screen, font, f"Miss: {miss}", (right_x, mid_y + 110))
+
+        _draw_text_centered(screen, font, f"Song: {title}", (width // 2, height - 160))
 
         option_rects = []
-        option_y = height - 120
+        option_y = height - 110
         for i, text in enumerate(options):
-            option_rects.append(_draw_text_centered(screen, font, text, (width // 2, option_y + i * 50)))
+            option_rects.append(_draw_text_centered(screen, font, text, (width // 2, option_y + i * 45)))
         _draw_option_border(screen, option_rects, selected_index)
 
         _draw_text_centered(

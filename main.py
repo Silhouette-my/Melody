@@ -25,7 +25,7 @@ STATE_SETTING= "setting"
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((800, 600))
+    screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
     font = pygame.font.SysFont(None, 50)
     state = STATE_MENU
     title_flag = 0
@@ -149,7 +149,7 @@ def main():
                 if "screen_size" in settings:
                     screen_size = settings["screen_size"]
             pygame.init()
-            screen = pygame.display.set_mode(screen_size)
+            screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
             font = pygame.font.SysFont(None, 50)
             if pygame.mixer.get_init():
                 pygame.mixer.music.set_volume(master_volume)
@@ -181,7 +181,7 @@ def main():
                 state = STATE_RESULT
                 continue
             pygame.init()
-            screen = pygame.display.set_mode(screen_size)
+            screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
             font = pygame.font.SysFont(None, 50)
             if pygame.mixer.get_init():
                 pygame.mixer.music.set_volume(master_volume)
@@ -191,8 +191,18 @@ def main():
         elif state == STATE_RESULT:
             action = result.run_result(result_data or {}, screen_size)
             if action == "retry":
+                pygame.init()
+                screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+                font = pygame.font.SysFont(None, 50)
+                if pygame.mixer.get_init():
+                    pygame.mixer.music.set_volume(master_volume)
                 state = STATE_PLAY
             else:
+                pygame.init()
+                screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+                font = pygame.font.SysFont(None, 50)
+                if pygame.mixer.get_init():
+                    pygame.mixer.music.set_volume(master_volume)
                 state = STATE_SELECT
 
 if __name__ == "__main__":

@@ -535,9 +535,9 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     if screen_size is None:
         screen_sizes = [(800,600),(1280,760),(1920,1080)] #??????
         size_select = 0 #????????(???????????????????????)
-        screen = pg.display.set_mode(screen_sizes[size_select])
+        screen = pg.display.set_mode(screen_sizes[size_select], pg.RESIZABLE)
     else:
-        screen = pg.display.set_mode(screen_size)
+        screen = pg.display.set_mode(screen_size, pg.RESIZABLE)
     #初始化窗口
 
     background = pg.Surface(screen.get_size())
