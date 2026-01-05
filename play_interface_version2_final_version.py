@@ -530,6 +530,22 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         if(song_player_name[i] == title_song):
             pg.mixer.music.load(song_player[i]) 
             break
+    def build_result():
+        total_hits = sum(rank_level_judge)
+        if total_hits > 0:
+            accuracy = (rank_level_judge[0] + rank_level_judge[1] * 0.5) / total_hits * 100
+        else:
+            accuracy = 0.0
+        return {
+            'title': title_song,
+            'score': score,
+            'max_combo': max_combo,
+            'perfect': rank_level_judge[0],
+            'good': rank_level_judge[1],
+            'bad': rank_level_judge[2],
+            'miss': rank_level_judge[3],
+            'accuracy': accuracy,
+        }
 
     #
     if screen_size is None:
@@ -588,15 +604,52 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     isEnd = False
     isProgressEnd = False
     end_start_ms = None
+    esc_hold_start = None
 
     while isRunning:
         for ev in pg.event.get():
             if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
+                keys = pg.key.get_pressed()
+                if keys[pg.K_ESCAPE] and not isEnd:
+                    if esc_hold_start is None:
+                        esc_hold_start = pg.time.get_ticks()
+                    continue
                 isRunning = False
                 break
+            if ev.type == pg.VIDEORESIZE:
+                screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
+                background = pg.Surface(screen.get_size())
+                background.fill((30, 30, 30))
+                s_width = pg.Surface.get_width(screen)
+                s_height = pg.Surface.get_height(screen)
+                column_line_positions = [
+                    s_width/2-3*50,
+                    s_width/2-1*50,
+                    s_width/2+1*50,
+                    s_width/2+3*50,
+                    s_width/2+5*50
+                ]
+                column_note_positions = [
+                    s_width/2-3*50,
+                    s_width/2-1*50,
+                    s_width/2+1*50,
+                    s_width/2+3*50
+                ]
+                for col in range(0,4):
+                    for rect in rect_note_storage[col]:
+                        rect.centerx = column_note_positions[col]
+                    for rect in rect_note_current[col]:
+                        rect.centerx = column_note_positions[col]
+                    for rect in rect_upper_note_current[col]:
+                        rect.centerx = column_note_positions[col]
             if(ev.type == pg.KEYDOWN):
                 if(ev.key == pg.K_ESCAPE):
-                    if(not isEnd):
+                    if isEnd:
+                        return None, local_offset
+                    esc_hold_start = pg.time.get_ticks()
+            if(ev.type == pg.KEYUP and ev.key == pg.K_ESCAPE):
+                if esc_hold_start is not None:
+                    if pg.time.get_ticks() - esc_hold_start < 2000 and not isEnd:
                         freeze_elapsed = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
                         if pg.mixer.get_init():
                             pg.mixer.music.pause()
@@ -614,16 +667,21 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                             break
                         if action == "restart":
                             return "restart",local_offset
-                    elif(isEnd):
-                        return None, local_offset
-                        isRunning = False
-                        break
+                    elif not isEnd:
+                        if pg.mixer.get_init():
+                            pg.mixer.music.stop()
+                        return build_result(), local_offset
+                esc_hold_start = None
             if(ev.type == pg.KEYDOWN):
                 note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
             if(ev.type == pg.KEYUP):
                 note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
 
         now_ms = pg.time.get_ticks()
+        if esc_hold_start is not None and now_ms - esc_hold_start >= 2000 and not isEnd:
+            if pg.mixer.get_init():
+                pg.mixer.music.stop()
+            return build_result(), local_offset
         if resume_metronome_active:
             start_time = pg.time.get_ticks()/1000.0 + time_offset_sec - freeze_elapsed
             if metronome_sound is not None:
@@ -672,24 +730,9 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
 
         if isEnd and end_start_ms is not None:
             if pg.time.get_ticks() - end_start_ms >= 1000:
-                total_hits = sum(rank_level_judge)
-                if total_hits > 0:
-                    accuracy = (rank_level_judge[0] + rank_level_judge[1] * 0.5) / total_hits * 100
-                else:
-                    accuracy = 0.0
                 if pg.mixer.get_init():
                     pg.mixer.music.stop()
-                result = {
-                    'title': title_song,
-                    'score': score,
-                    'max_combo': max_combo,
-                    'perfect': rank_level_judge[0],
-                    'good': rank_level_judge[1],
-                    'bad': rank_level_judge[2],
-                    'miss': rank_level_judge[3],
-                    'accuracy': accuracy,
-                }
-                return result, local_offset
+                return build_result(), local_offset
         pg.display.update()
         clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
 

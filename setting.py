@@ -189,6 +189,8 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
             if ev.type == pg.QUIT:
                 pg.quit()
                 sys.exit()
+            if ev.type == pg.VIDEORESIZE:
+                screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
             if ev.type == pg.KEYDOWN:
                 if ev.key == pg.K_DOWN:
                     selected_index = min(selected_index + 1, 3)

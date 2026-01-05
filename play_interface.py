@@ -223,7 +223,7 @@ for i in range(0,len(song_player),1):
 
 screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
 size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
-screen = pg.display.set_mode(screen_size[size_select])
+screen = pg.display.set_mode(screen_size[size_select], pg.RESIZABLE)
 #初始化窗口
 
 background = pg.Surface(screen.get_size())

@@ -42,7 +42,7 @@ if __name__ == "__main__":
 	screen_size = [(800,600),(1280,760),(1920,1080)] #窗口大小规格
 	size_select = 0 #窗口大小规格选择(还没做自己选择的功能，但可以在程序内手动改数值)
 	button_select_flag = 0
-	screen = pg.display.set_mode(screen_size[size_select])
+	screen = pg.display.set_mode(screen_size[size_select], pg.RESIZABLE)
 	#初始化窗口
 	#
 	clock = pg.time.Clock()	#计时器
@@ -58,6 +58,11 @@ if __name__ == "__main__":
 			if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
 				isRunning = False
 				break
+			elif(ev.type == pg.VIDEORESIZE):
+				screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
+				screen.fill((0, 0, 0))
+				text_rect = screen_interface(screen,font)
+				last_rect = button_border_draw(screen,text_rect,button_select_flag)
 			elif(ev.type == pg.KEYDOWN):
 				if(ev.key == pg.K_DOWN):
 					if(button_select_flag < 2):

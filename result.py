@@ -80,6 +80,8 @@ def run_result(result_data, screen_size):
             if ev.type == pg.QUIT:
                 pg.quit()
                 sys.exit()
+            if ev.type == pg.VIDEORESIZE:
+                screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
             if ev.type == pg.KEYDOWN:
                 if ev.key == pg.K_DOWN:
                     selected_index = min(len(options) - 1, selected_index + 1)
@@ -142,4 +144,4 @@ def run_result(result_data, screen_size):
 
 
 if __name__ == "__main__":
-    run_result({}, (800, 600))
+    run_result({}, (800,600))

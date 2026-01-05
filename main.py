@@ -58,6 +58,12 @@ def main():
                     if ev.type == pygame.QUIT:
                         pygame.quit()
                         sys.exit()
+                    elif ev.type == pygame.VIDEORESIZE:
+                        screen_size = ev.size
+                        screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+                        screen.fill((0, 0, 0))
+                        text_rect = main_interface.screen_interface(screen, font)
+                        last_rect = main_interface.button_border_draw(screen, text_rect, selected_index)
                     elif ev.type == pygame.KEYDOWN:
                         if ev.key == pygame.K_RETURN:  # Enter 进入选曲
                             if selected_index == 0:
@@ -106,6 +112,9 @@ def main():
                     if ev.type == pygame.QUIT:
                         pygame.quit()
                         sys.exit()
+                    elif ev.type == pygame.VIDEORESIZE:
+                        screen_size = ev.size
+                        screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
                     elif ev.type == pygame.KEYDOWN:
                         if ev.key == pygame.K_RETURN:
                             # 确认选曲
