@@ -605,6 +605,10 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     isProgressEnd = False
     end_start_ms = None
     esc_hold_start = None
+    auto_play_enabled = False
+    auto_play_msg = None
+    auto_play_msg_time = 0
+    auto_play_hold = [False, False, False, False]
 
     while isRunning:
         for ev in pg.event.get():
@@ -647,6 +651,10 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                     if isEnd:
                         return None, local_offset
                     esc_hold_start = pg.time.get_ticks()
+                elif(ev.key == pg.K_q):
+                    auto_play_enabled = not auto_play_enabled
+                    auto_play_msg = "AUTO PLAY ON" if auto_play_enabled else "AUTO PLAY OFF"
+                    auto_play_msg_time = pg.time.get_ticks()
             if(ev.type == pg.KEYUP and ev.key == pg.K_ESCAPE):
                 if esc_hold_start is not None:
                     if pg.time.get_ticks() - esc_hold_start < 2000 and not isEnd:
@@ -706,6 +714,20 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         pg.draw.line(screen, (255, 200, 0), (0, s_height - 100), (s_width, s_height - 100), 3)
 
         note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
+
+        if auto_play_enabled:
+            current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
+            for lane in range(0,4):
+                if auto_play_hold[lane]:
+                    if note_duration_time[lane] <= 0 or (current_time - column_lock_clock[lane]) >= note_duration_time[lane]:
+                        note_keyboard_judge(1, keyboard_map_use[lane], screen, column_statement, column_lock_clock, note_duration_time, note_current, rect_note_current, rect_upper_note_current, lock_time, start_time, fall_speed, rank_level_judge)
+                        auto_play_hold[lane] = False
+                    continue
+                if len(note_current[lane]) > 0:
+                    if abs(note_current[lane][0] - current_time) <= 0.02:
+                        note_keyboard_judge(0, keyboard_map_use[lane], screen, column_statement, column_lock_clock, note_duration_time, note_current, rect_note_current, rect_upper_note_current, lock_time, start_time, fall_speed, rank_level_judge)
+                        if note_duration_time[lane] > 0:
+                            auto_play_hold[lane] = True
         
         # 绘制左上角记分器
         draw_score_display(screen)
@@ -718,6 +740,16 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
             isProgressEnd = draw_progress_bar(screen,total_time,total_time)
         
         text_draw(screen)
+
+        if auto_play_msg is not None:
+            if pg.time.get_ticks() - auto_play_msg_time <= 1000:
+                msg_font = pg.font.SysFont(None, 28)
+                msg_image = msg_font.render(auto_play_msg, True, (200, 200, 200))
+                msg_rect = msg_image.get_rect()
+                msg_rect.center = (s_width // 2, 24)
+                screen.blit(msg_image, msg_rect)
+            else:
+                auto_play_msg = None
 
         if(not(end_judge(note,note_read_sp) and len(note_current))):
             last_time = rank_check(rank_level_judge,last_time,start_time)
