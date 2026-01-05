@@ -33,6 +33,9 @@ def main():
     current_latency = 0
     local_offset = 0
     screen_size = (800, 600)
+    icon = pygame.image.load("icon.ico").convert_alpha()
+    pygame.display.set_icon(icon)
+    pygame.display.set_caption("Melody")
     if pygame.mixer.get_init():
         pygame.mixer.music.set_volume(master_volume)
     shared_state.MASTER_VOLUME = master_volume
