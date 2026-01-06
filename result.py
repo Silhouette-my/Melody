@@ -2,6 +2,17 @@ import pygame as pg
 import sys
 
 
+def _get_scale_factor(screen_size):
+    """获取相对于800x600基准分辨率的缩放因子"""
+    base_width, base_height = 800, 600
+    width, height = screen_size
+    
+    # 计算宽高两个方向的缩放比例，取较小值以保证整体适配
+    scale_w = width / base_width
+    scale_h = height / base_height
+    return min(scale_w, scale_h)
+
+
 def _draw_text_centered(screen, font, text, center, color="white"):
     image = font.render(text, True, color)
     rect = image.get_rect(center=center)
@@ -59,10 +70,22 @@ def _draw_vignette(screen, strength=110):
 def run_result(result_data, screen_size):
     pg.init()
     screen = pg.display.set_mode(screen_size, pg.RESIZABLE)
-    title_font = pg.font.SysFont(None, 72)
-    grade_font = pg.font.SysFont(None, 120)
-    font = pg.font.SysFont(None, 40)
-    small_font = pg.font.SysFont(None, 24)
+    
+    # 计算缩放因子
+    scale_factor = _get_scale_factor(screen_size)
+    
+    # 根据缩放因子动态计算字体大小
+    title_font_size = int(72 * scale_factor)
+    grade_font_size = int(120 * scale_factor)
+    font_size = int(40 * scale_factor)
+    small_font_size = int(24 * scale_factor)
+    
+    # 创建字体对象
+    title_font = pg.font.SysFont(None, title_font_size)
+    grade_font = pg.font.SysFont(None, grade_font_size)
+    font = pg.font.SysFont(None, font_size)
+    small_font = pg.font.SysFont(None, small_font_size)
+    
     clock = pg.time.Clock()
 
     title = result_data.get("title", "Result")
@@ -85,7 +108,21 @@ def run_result(result_data, screen_size):
                 pg.quit()
                 sys.exit()
             if ev.type == pg.VIDEORESIZE:
+                # 窗口大小改变时更新屏幕和字体
                 screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
+                scale_factor = _get_scale_factor(ev.size)
+                
+                # 重新计算字体大小
+                title_font_size = int(72 * scale_factor)
+                grade_font_size = int(120 * scale_factor)
+                font_size = int(40 * scale_factor)
+                small_font_size = int(24 * scale_factor)
+                
+                # 重新创建字体对象
+                title_font = pg.font.SysFont(None, title_font_size)
+                grade_font = pg.font.SysFont(None, grade_font_size)
+                font = pg.font.SysFont(None, font_size)
+                small_font = pg.font.SysFont(None, small_font_size)
             if ev.type == pg.KEYDOWN:
                 if ev.key == pg.K_DOWN:
                     selected_index = min(len(options) - 1, selected_index + 1)
@@ -111,36 +148,70 @@ def run_result(result_data, screen_size):
         screen.fill((18, 18, 18))
         _draw_vignette(screen)
         width, height = screen.get_size()
+        
+        # 重新计算缩放因子（确保窗口大小变化时位置正确）
+        current_scale = _get_scale_factor((width, height))
+        
+        # 根据800x600基准分辨率计算位置，然后乘以缩放因子
+        # 基准位置 (800x600)
+        base_positions = {
+            'title_y': height // 7,  # RESULT标题位置
+            'grade_y': height // 3,  # 等级位置
+            'score_y': height // 3 + int(90 * current_scale),  # 分数位置
+            'left_x': width // 2 - int(220 * current_scale),  # 左侧区域X坐标
+            'right_x': width // 2 + int(180 * current_scale),  # 右侧区域X坐标
+            'mid_y': height // 2 + int(30 * current_scale),  # 中间区域Y坐标
+            'option_y': height - int(110 * current_scale),  # 选项区域Y坐标
+            'song_y': height - int(160 * current_scale),  # 歌曲信息Y坐标
+            'hint_y': height - int(30 * current_scale)  # 提示信息Y坐标
+        }
 
-        _draw_text_centered(screen, title_font, "RESULT", (width // 2, height // 7))
-        _draw_text_centered(screen, grade_font, grade, (width // 2, height // 3), _grade_color(grade))
-        _draw_text_centered(screen, font, f"SCORE: {score:,}", (width // 2, height // 3 + 90))
+        # 绘制RESULT标题
+        _draw_text_centered(screen, title_font, "RESULT", (width // 2, base_positions['title_y']))
+        
+        # 绘制等级
+        _draw_text_centered(screen, grade_font, grade, (width // 2, base_positions['grade_y']), _grade_color(grade))
+        
+        # 绘制分数
+        _draw_text_centered(screen, font, f"SCORE: {score:,}", (width // 2, base_positions['score_y']))
 
-        left_x = width // 2 - 220
-        right_x = width // 2 + 180
-        mid_y = height // 2 + 30
+        # 左侧数据：最大连击和准确率
+        _draw_text_centered(screen, font, f"Max Combo: {max_combo}", 
+                           (base_positions['left_x'], base_positions['mid_y'] + int(10 * current_scale)))
+        _draw_text_centered(screen, font, f"Accuracy: {accuracy:.1f}%", 
+                           (base_positions['left_x'], base_positions['mid_y'] + int(60 * current_scale)), 
+                           (120, 220, 120))
 
-        _draw_text_centered(screen, font, f"Max Combo: {max_combo}", (left_x, mid_y+10))
-        _draw_text_centered(screen, font, f"Accuracy: {accuracy:.1f}%", (left_x, mid_y + 60), (120, 220, 120))
+        # 右侧数据：命中统计（使用小字体）
+        stat_spacing = int(20 * current_scale)  # 行间距
+        _draw_text_centered(screen, small_font, f"Perfect: {perfect}", 
+                           (base_positions['right_x'], base_positions['mid_y'] + int(5 * current_scale)))
+        _draw_text_centered(screen, small_font, f"Great: {good}", 
+                           (base_positions['right_x'], base_positions['mid_y'] + int(25 * current_scale)))
+        _draw_text_centered(screen, small_font, f"Bad: {bad}", 
+                           (base_positions['right_x'], base_positions['mid_y'] + int(45 * current_scale)))
+        _draw_text_centered(screen, small_font, f"Miss: {miss}", 
+                           (base_positions['right_x'], base_positions['mid_y'] + int(65 * current_scale)))
 
-        _draw_text_centered(screen, small_font, f"Perfect: {perfect}", (right_x, mid_y +5))
-        _draw_text_centered(screen, small_font, f"Great: {good}", (right_x, mid_y + 25))
-        _draw_text_centered(screen, small_font, f"Bad: {bad}", (right_x, mid_y + 45))
-        _draw_text_centered(screen, small_font, f"Miss: {miss}", (right_x, mid_y + 65))
+        # 绘制歌曲信息
+        _draw_text_centered(screen, font, f"Song: {title}", (width // 2, base_positions['song_y']))
 
-        _draw_text_centered(screen, font, f"Song: {title}", (width // 2, height - 160))
-
+        # 绘制选项按钮
         option_rects = []
-        option_y = height - 110
+        option_spacing = int(45 * current_scale)  # 选项间距
         for i, text in enumerate(options):
-            option_rects.append(_draw_text_centered(screen, font, text, (width // 2, option_y + i * 45)))
+            option_y = base_positions['option_y'] + i * option_spacing
+            option_rects.append(_draw_text_centered(screen, font, text, (width // 2, option_y)))
+        
+        # 绘制选项边框
         _draw_option_border(screen, option_rects, selected_index)
 
+        # 绘制操作提示
         _draw_text_centered(
             screen,
             small_font,
             "Up/Down to choose, Enter to confirm, Esc to go back",
-            (width // 2, height - 30),
+            (width // 2, base_positions['hint_y']),
         )
 
         pg.display.update()
