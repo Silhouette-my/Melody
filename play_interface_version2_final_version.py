@@ -55,6 +55,16 @@ def list_space_initialize(target_list,dimension):
         target_list.append(temp)
 #
 
+def _get_scale_factor(screen_size):
+    """获取相对于800x600基准分辨率的缩放因子"""
+    base_width, base_height = 800, 600
+    width, height = screen_size
+    
+    # 计算宽高两个方向的缩放比例，取较小值以保证整体适配
+    scale_w = width / base_width
+    scale_h = height / base_height
+    return min(scale_w, scale_h)
+
 def note_time_initialize(note_storage,note,screen):
     """初始化音符时间存储：将每个音符的出现时间按列存储"""
     length = len(note) #note的个数+1(Malody的note信息里面多了一个配置信息)
@@ -486,6 +496,8 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     rect_upper_note_current = list() # 存储当前可见的上层音符矩形（长条用）
     list_space_initialize(rect_upper_note_current,4)
 
+    scale_factor = _get_scale_factor(screen_size)
+
     # 初始化各种状态变量
     note_read_sp = [0,0,0,0] # 各轨道已读取的音符索引
     column_statement = [0,0,0,0] # 各轨道的按键状态（0=未按下，1=已按下）
@@ -493,7 +505,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     note_duration_time = [0,0,0,0] # 各轨道长条的剩余持续时间
     last_time = 0
     lock_time = 0
-    fall_speed = 750 # 音符下落速度（像素/秒）
+    fall_speed = 750 *scale_factor # 音符下落速度（像素/秒）
     final_offset_ms = current_latency + local_offset # 最终偏移量
     time_offset_sec = final_offset_ms / 1000.0
     offset = final_offset_ms
