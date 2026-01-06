@@ -18,6 +18,8 @@ def _draw_option_border(screen, rects, index):
 
 
 def _grade_from_accuracy(accuracy):
+    if accuracy == 100.0:
+        return "SS"
     if accuracy >= 98.0:
         return "S"
     if accuracy >= 95.0:
@@ -30,6 +32,8 @@ def _grade_from_accuracy(accuracy):
 
 
 def _grade_color(grade):
+    if grade == "SS":
+        return (255, 215, 0)
     if grade == "S":
         return (120, 220, 255)
     if grade == "A":
@@ -113,16 +117,16 @@ def run_result(result_data, screen_size):
         _draw_text_centered(screen, font, f"SCORE: {score:,}", (width // 2, height // 3 + 90))
 
         left_x = width // 2 - 220
-        right_x = width // 2 + 220
-        mid_y = height // 2 + 10
+        right_x = width // 2 + 180
+        mid_y = height // 2 + 30
 
-        _draw_text_centered(screen, font, f"Max Combo: {max_combo}", (left_x, mid_y))
-        _draw_text_centered(screen, font, f"Accuracy: {accuracy:.1f}%", (left_x, mid_y + 50), (120, 220, 120))
+        _draw_text_centered(screen, font, f"Max Combo: {max_combo}", (left_x, mid_y+10))
+        _draw_text_centered(screen, font, f"Accuracy: {accuracy:.1f}%", (left_x, mid_y + 60), (120, 220, 120))
 
-        _draw_text_centered(screen, font, f"Perfect: {perfect}", (right_x, mid_y - 10))
-        _draw_text_centered(screen, font, f"Great: {good}", (right_x, mid_y + 30))
-        _draw_text_centered(screen, font, f"Bad: {bad}", (right_x, mid_y + 70))
-        _draw_text_centered(screen, font, f"Miss: {miss}", (right_x, mid_y + 110))
+        _draw_text_centered(screen, small_font, f"Perfect: {perfect}", (right_x, mid_y +5))
+        _draw_text_centered(screen, small_font, f"Great: {good}", (right_x, mid_y + 25))
+        _draw_text_centered(screen, small_font, f"Bad: {bad}", (right_x, mid_y + 45))
+        _draw_text_centered(screen, small_font, f"Miss: {miss}", (right_x, mid_y + 65))
 
         _draw_text_centered(screen, font, f"Song: {title}", (width // 2, height - 160))
 
