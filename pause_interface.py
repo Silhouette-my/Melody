@@ -55,7 +55,7 @@ def coordinate_calculate(width,height,font,coordinate_text_use):
 	button_bottom_y = center_rect_y + center_rect_height  # 底部y坐标
     
     # 首先获取每个按钮文本的宽度，用于计算总宽度
-	button_texts = ['continue', 'restart', 'quit']
+	button_texts = ['Continue', 'Restart', 'Exit']
 	button_widths = []
 	for text in button_texts:
 		text_image = font.render(text, True, 'white')
@@ -110,7 +110,7 @@ def button_border_clear(screen,last_rect):
 def slider_draw(screen,value,label,rect_text_use,font,slider_volume_rect,slider_offset_rect):
 	width = pg.Surface.get_width(screen)
 	height = pg.Surface.get_height(screen)
-	if(label == 'volume'):
+	if(label == 'Volume'):
 		# 获取continue和quit按钮的矩形
 		# rect_text_use[2]是continue, rect_text_use[4]是quit
 		continue_rect = rect_text_use[2]
@@ -143,7 +143,7 @@ def slider_draw(screen,value,label,rect_text_use,font,slider_volume_rect,slider_
 		if surface is not None:
 			surface.blit(volume_image, volume_rect)
 
-	elif(label == 'local offset'):
+	elif(label == 'Local offset'):
 		# 获取continue和quit按钮的矩形
 		# rect_text_use[2]是continue, rect_text_use[4]是quit
 		continue_rect = rect_text_use[2]
@@ -180,12 +180,12 @@ def slider_draw(screen,value,label,rect_text_use,font,slider_volume_rect,slider_
 			surface.blit(offset_image, offset_rect)
 
 def slider_clear(screen,label,slider_volume_rect,slider_offset_rect):
-	if(label == 'volume'):
+	if(label == 'Volume'):
 		for i in range(0,2,1):
 			pg.draw.rect(screen,'black',slider_volume_rect[i])
 		for i in range(0,len(slider_volume_rect),1):
 			del slider_volume_rect[0]
-	elif(label == 'local offset'):
+	elif(label == 'Local offset'):
 		for i in range(0,2,1):
 			pg.draw.rect(screen,'black',slider_offset_rect[i])
 		for i in range(0,len(slider_offset_rect),1):
@@ -208,7 +208,7 @@ def run_pause(screen, current_volume, current_offset):
 	font = pg.font.SysFont(None,font_size_use)
 	screen.fill((0, 0, 0))
 
-	text_use = ['volume','local offset','continue','restart','quit']
+	text_use = ['Volume','Local offset','Continue','Restart','Exit']
 	coordinate_text_use = list()
 	rect_text_use = list()
 	slider_volume_rect = list()
@@ -219,8 +219,8 @@ def run_pause(screen, current_volume, current_offset):
 
 	coordinate_calculate(width,height,font,coordinate_text_use)
 	text_draw(screen,font,text_use,coordinate_text_use,rect_text_use)
-	slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
-	slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+	slider_draw(screen,volume,'Volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+	slider_draw(screen,offset,'Local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 	last_rect = button_border_draw(screen,rect_text_use,flag)
 	last_update_time = 0
 	key_update_delay = 80
@@ -252,8 +252,8 @@ def run_pause(screen, current_volume, current_offset):
 				slider_offset_rect = list()
 				coordinate_calculate(width,height,font,coordinate_text_use)
 				text_draw(screen,font,text_use,coordinate_text_use,rect_text_use)
-				slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
-				slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+				slider_draw(screen,volume,'Volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+				slider_draw(screen,offset,'Local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 				last_rect = button_border_draw(screen,rect_text_use,flag)
 			elif(ev.type == pg.KEYDOWN):
 				if(ev.key == pg.K_ESCAPE):
@@ -285,28 +285,28 @@ def run_pause(screen, current_volume, current_offset):
 			keys = pg.key.get_pressed()
 			if keys[pg.K_RIGHT]:
 				if(flag == 0):
-					slider_clear(screen,'volume',slider_volume_rect,slider_offset_rect)
+					slider_clear(screen,'Volume',slider_volume_rect,slider_offset_rect)
 					volume = min(100,volume+1)
-					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+					slider_draw(screen,volume,'Volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 					if pg.mixer.get_init():
 						pg.mixer.music.set_volume(volume/100)
 					shared_state.MASTER_VOLUME = volume / 100.0
 				elif(flag == 1):
-					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
+					slider_clear(screen,'Local offset',slider_volume_rect,slider_offset_rect)
 					offset = min(1000,offset+10)
-					slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+					slider_draw(screen,offset,'Local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 			elif keys[pg.K_LEFT]:
 				if(flag == 0):
-					slider_clear(screen,'volume',slider_volume_rect,slider_offset_rect)
+					slider_clear(screen,'Volume',slider_volume_rect,slider_offset_rect)
 					volume = max(0,volume-1)
-					slider_draw(screen,volume,'volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+					slider_draw(screen,volume,'Volume',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 					if pg.mixer.get_init():
 						pg.mixer.music.set_volume(volume/100)
 					shared_state.MASTER_VOLUME = volume / 100.0
 				elif(flag == 1):
-					slider_clear(screen,'local offset',slider_volume_rect,slider_offset_rect)
+					slider_clear(screen,'Local offset',slider_volume_rect,slider_offset_rect)
 					offset = max(-1000,offset-10)
-					slider_draw(screen,offset,'local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
+					slider_draw(screen,offset,'Local offset',rect_text_use,font,slider_volume_rect,slider_offset_rect)
 			last_update_time = current_time
 		keys = pg.key.get_pressed()
 		if keys[pg.K_ESCAPE] and esc_hold_start is not None:
@@ -324,7 +324,7 @@ def run_pause(screen, current_volume, current_offset):
 
 pg.init()
 
-text_use = ['volume','local offset','continue','restart','quit']
+text_use = ['Volume','Local offset','continue','restart','quit']
 coordinate_text_use = list()
 rect_text_use = list()
 slider_volume_rect = list()
