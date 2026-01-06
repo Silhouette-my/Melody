@@ -20,6 +20,7 @@ def screen_interface(screen,font):
 	scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
 	font_size = int(50 * scale_factor)
 	font = pg.font.SysFont(None, font_size) #字体数据初始化
+	font_title = pg.font.SysFont(None, int(80*scale_factor))
 	# 绘制主界面的菜单项（开始、设置、退出）
 	text = MENU_ITEMS
 	text_image = list()
@@ -28,16 +29,23 @@ def screen_interface(screen,font):
 	s_height = pg.Surface.get_height(screen)
 	mid_pos = (s_width//2,s_height//2)
 
+	title = "Melody"
+	title_image = font_title.render(title,True,'white')
+	title_rect = title_image.get_rect()
 	# 根据缩放因子调整垂直间距
 	spacing_multiplier = 2 * scale_factor
+
+	y_offset = s_height/20 *spacing_multiplier
+	title_rect.center = (mid_pos[0],mid_pos[1] - y_offset)
+	screen.blit(title_image,title_rect)
 	# 遍历菜单项，绘制每个菜单项
 	for i in range(0,len(text),1):
 		text_image.append(font.render(text[i],True,'white'))
 		text_rect.append(text_image[i].get_rect())
-		t_height = text_rect[i].height
+		t_width = text_rect[i].width
         # 调整垂直位置，根据缩放因子计算
-		y_offset = (i-1) * spacing_multiplier * t_height
-		text_rect[i].center = (mid_pos[0], mid_pos[1] + y_offset) #从上往下依次绘制
+		x_offset = (i-1) * spacing_multiplier * t_width
+		text_rect[i].center = (mid_pos[0] + x_offset, mid_pos[1] + y_offset) #从上往下依次绘制
 		screen.blit(text_image[i],text_rect[i])
 	return text_rect
 
@@ -94,21 +102,21 @@ if __name__ == "__main__":
 
 				screen.fill((0, 0, 0))
 				text_rect = screen_interface(screen,font,scale_factor)
-				last_rect = button_border_draw(screen,text_rect,button_select_flag,scale_factor)
+				last_rect = button_border_draw(screen,text_rect,button_select_flag)
 			elif(ev.type == pg.KEYDOWN): # 处理键盘按下事件
-				if(ev.key == pg.K_DOWN):
+				if(ev.key == pg.K_RIGHT):
 					if(button_select_flag < 2):
 						button_border_clear(screen,last_rect)
 						button_select_flag += 1
-						last_rect = button_border_draw(screen,text_rect,button_select_flag,scale_factor)
+						last_rect = button_border_draw(screen,text_rect,button_select_flag)
 					elif(button_select_flag >= 2):
 						button_select_flag = 2
 					break
-				elif(ev.key == pg.K_UP):
+				elif(ev.key == pg.K_LEFT):
 					if(button_select_flag > 0):
 						button_border_clear(screen,last_rect)
 						button_select_flag -= 1
-						last_rect = button_border_draw(screen,text_rect,button_select_flag,scale_factor)
+						last_rect = button_border_draw(screen,text_rect,button_select_flag)
 					elif(button_select_flag <= 0):
 						button_select_flag = 0
 					break
