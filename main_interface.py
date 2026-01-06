@@ -7,12 +7,14 @@ import pygame as pg
 MENU_ITEMS = ["start", "settings", "quit"]
 
 def screen_interface(screen,font):
+	# 绘制主界面的菜单项（开始、设置、退出）
 	text = MENU_ITEMS
 	text_image = list()
 	text_rect = list()
 	s_width = pg.Surface.get_width(screen)
 	s_height = pg.Surface.get_height(screen)
 	mid_pos = (s_width//2,s_height//2)
+	# 遍历菜单项，绘制每个菜单项
 	for i in range(0,len(text),1):
 		text_image.append(font.render(text[i],True,'white'))
 		text_rect.append(text_image[i].get_rect())
@@ -27,7 +29,7 @@ def button_border_draw(screen,text_rect,select_flag):
 	border_y = text_rect[select_flag].y-5
 	border_width = text_rect[select_flag].width+10
 	border_height = text_rect[select_flag].height+10
-	last_rect = pg.Rect(border_x, border_y, border_width, border_height)
+	last_rect = pg.Rect(border_x, border_y, border_width, border_height) # 创建边框矩形
 	border_color = 'white'
 	border_line_width = 1
 	pg.draw.rect(screen, border_color, last_rect, border_line_width)
@@ -58,12 +60,12 @@ if __name__ == "__main__":
 			if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
 				isRunning = False
 				break
-			elif(ev.type == pg.VIDEORESIZE):
+			elif(ev.type == pg.VIDEORESIZE): # 处理窗口大小调整事件
 				screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
 				screen.fill((0, 0, 0))
 				text_rect = screen_interface(screen,font)
 				last_rect = button_border_draw(screen,text_rect,button_select_flag)
-			elif(ev.type == pg.KEYDOWN):
+			elif(ev.type == pg.KEYDOWN): # 处理键盘按下事件
 				if(ev.key == pg.K_DOWN):
 					if(button_select_flag < 2):
 						button_border_clear(screen,last_rect)
