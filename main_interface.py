@@ -4,7 +4,7 @@ import numpy as py
 import pygame as pg
 
 #绘制主界面的start,settings,quit
-MENU_ITEMS = ["start", "settings", "quit"]
+MENU_ITEMS = ["Start", "Settings", "Exit"]
 
 def _get_scale_factor(screen_size):
     """获取相对于800x600基准分辨率的缩放因子"""
@@ -32,21 +32,40 @@ def screen_interface(screen,font):
 	title = "Melody"
 	title_image = font_title.render(title,True,'white')
 	title_rect = title_image.get_rect()
-	# 根据缩放因子调整垂直间距
+	# 根据缩放因子调整水平间距
 	spacing_multiplier = 2 * scale_factor
 
-	y_offset = s_height/20 *spacing_multiplier
+	y_offset = 28 *spacing_multiplier
 	title_rect.center = (mid_pos[0],mid_pos[1] - y_offset)
 	screen.blit(title_image,title_rect)
-	# 遍历菜单项，绘制每个菜单项
-	for i in range(0,len(text),1):
-		text_image.append(font.render(text[i],True,'white'))
-		text_rect.append(text_image[i].get_rect())
-		t_width = text_rect[i].width
-        # 调整垂直位置，根据缩放因子计算
-		x_offset = (i-1) * spacing_multiplier * t_width
-		text_rect[i].center = (mid_pos[0] + x_offset, mid_pos[1] + y_offset) #从上往下依次绘制
-		screen.blit(text_image[i],text_rect[i])
+    # 先计算所有文本的宽度
+	item_widths = []
+	for item in text:
+		text_surface = font.render(item, True, 'white')
+		item_widths.append(text_surface.get_width())
+    
+    # 计算总宽度和间距
+	total_width = sum(item_widths)
+	spacing = s_width / 15 * scale_factor  # 使用固定比例的间距
+    
+    # 计算起始x位置，使整个菜单水平居中
+	start_x = mid_pos[0] - (total_width + spacing * (len(text) - 1)) / 2
+    
+    # 绘制菜单项，保持均匀间距
+	current_x = start_x
+	for i, item in enumerate(text):
+		text_images = font.render(item, True, 'white')
+		text_rects = text_images.get_rect()
+        
+        # 设置文本位置
+		text_rects.center = (current_x + item_widths[i]/2, mid_pos[1] + y_offset)
+		screen.blit(text_images, text_rects)
+        
+		text_image.append(text_images)
+		text_rect.append(text_rects)
+        
+        # 更新下一个项的位置：当前位置 + 文本宽度 + 间距
+		current_x += item_widths[i] + spacing
 	return text_rect
 
 #绘制选项提示框
