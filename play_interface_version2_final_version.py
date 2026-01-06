@@ -648,8 +648,10 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                         rect.centerx = column_note_positions[col]
             if(ev.type == pg.KEYDOWN):
                 if(ev.key == pg.K_ESCAPE):
-                    if isEnd:
-                        return None, local_offset
+                    if isProgressEnd:
+                        isRunning = False
+                        return build_result(), local_offset
+                        break
                     esc_hold_start = pg.time.get_ticks()
                 elif(ev.key == pg.K_q):
                     auto_play_enabled = not auto_play_enabled
@@ -758,13 +760,11 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
             print(len(note)-1)
             combo = 0
             isDoing = False
-            end_start_ms = pg.time.get_ticks()
 
-        if isEnd and end_start_ms is not None:
-            if pg.time.get_ticks() - end_start_ms >= 1000:
-                if pg.mixer.get_init():
-                    pg.mixer.music.stop()
-                return build_result(), local_offset
+        if isProgressEnd:
+            if pg.mixer.get_init():
+                pg.mixer.music.stop()
+
         pg.display.update()
         clock.tick(100) #两次循环间隔(等价于100帧,保证按键有不响应期)
 
