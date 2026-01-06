@@ -195,7 +195,7 @@ def run_pause(screen, current_volume, current_offset):
 	width = pg.Surface.get_width(screen)
 	height = pg.Surface.get_height(screen)
 	clock = pg.time.Clock()
-	font_size = [30,40,60]
+	font_size = [35,50,80]
 	screen_sizes = [(800,600),(1280,760),(1920,1080)]
 	font_size_use = None
 	for i in range(0,3,1):
