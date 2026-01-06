@@ -78,12 +78,12 @@ def main():
                             esc_hold_start = pygame.time.get_ticks()
                             esc_short_action = "quit"
                         # 上下键移动菜单
-                        elif ev.key == pygame.K_DOWN or ev.key == pygame.K_UP:
-                            if ev.key == pygame.K_DOWN and selected_index < len(text_rect) - 1:
+                        elif ev.key == pygame.K_RIGHT or ev.key == pygame.K_LEFT:
+                            if ev.key == pygame.K_RIGHT and selected_index < len(text_rect) - 1:
                                 main_interface.button_border_clear(screen, last_rect)
                                 selected_index += 1
                                 last_rect = main_interface.button_border_draw(screen, text_rect, selected_index)
-                            elif ev.key == pygame.K_UP and selected_index > 0:
+                            elif ev.key == pygame.K_LEFT and selected_index > 0:
                                 main_interface.button_border_clear(screen, last_rect)
                                 selected_index -= 1
                                 last_rect = main_interface.button_border_draw(screen, text_rect, selected_index)
