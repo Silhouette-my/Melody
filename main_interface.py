@@ -6,7 +6,20 @@ import pygame as pg
 #绘制主界面的start,settings,quit
 MENU_ITEMS = ["start", "settings", "quit"]
 
+def _get_scale_factor(screen_size):
+    """获取相对于800x600基准分辨率的缩放因子"""
+    base_width, base_height = 800, 600
+    width, height = screen_size
+    
+    # 计算宽高两个方向的缩放比例，取较小值以保证整体适配
+    scale_w = width / base_width
+    scale_h = height / base_height
+    return min(scale_w, scale_h)
+
 def screen_interface(screen,font):
+	scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
+	font_size = int(50 * scale_factor)
+	font = pg.font.SysFont(None, font_size) #字体数据初始化
 	# 绘制主界面的菜单项（开始、设置、退出）
 	text = MENU_ITEMS
 	text_image = list()
@@ -14,24 +27,30 @@ def screen_interface(screen,font):
 	s_width = pg.Surface.get_width(screen)
 	s_height = pg.Surface.get_height(screen)
 	mid_pos = (s_width//2,s_height//2)
+
+	# 根据缩放因子调整垂直间距
+	spacing_multiplier = 2 * scale_factor
 	# 遍历菜单项，绘制每个菜单项
 	for i in range(0,len(text),1):
 		text_image.append(font.render(text[i],True,'white'))
 		text_rect.append(text_image[i].get_rect())
 		t_height = text_rect[i].height
-		text_rect[i].center = (mid_pos[0],mid_pos[1]+(i-1)*2*t_height) #从上往下依次绘制
+        # 调整垂直位置，根据缩放因子计算
+		y_offset = (i-1) * spacing_multiplier * t_height
+		text_rect[i].center = (mid_pos[0], mid_pos[1] + y_offset) #从上往下依次绘制
 		screen.blit(text_image[i],text_rect[i])
 	return text_rect
 
 #绘制选项提示框
 def button_border_draw(screen,text_rect,select_flag):
-	border_x = text_rect[select_flag].x-5
-	border_y = text_rect[select_flag].y-5
-	border_width = text_rect[select_flag].width+10
-	border_height = text_rect[select_flag].height+10
+	scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
+	border_x = text_rect[select_flag].x-int(5 * scale_factor)
+	border_y = text_rect[select_flag].y-int(5 * scale_factor)
+	border_width = text_rect[select_flag].width+int(10 * scale_factor)
+	border_height = text_rect[select_flag].height+int(10 * scale_factor)
 	last_rect = pg.Rect(border_x, border_y, border_width, border_height) # 创建边框矩形
 	border_color = 'white'
-	border_line_width = 1
+	border_line_width = max(1, int(scale_factor))
 	pg.draw.rect(screen, border_color, last_rect, border_line_width)
 	return last_rect
 
@@ -46,9 +65,14 @@ if __name__ == "__main__":
 	button_select_flag = 0
 	screen = pg.display.set_mode(screen_size[size_select], pg.RESIZABLE)
 	#初始化窗口
+
+	# 计算初始缩放因子
+	scale_factor = _get_scale_factor(screen_size[size_select])
 	#
 	clock = pg.time.Clock()	#计时器
-	font = pg.font.SysFont(None,50) #字体数据初始化
+	base_font_size = 50
+	font_size = int(base_font_size * scale_factor)
+	font = pg.font.SysFont(None, font_size) #字体数据初始化
 	text_rect = screen_interface(screen,font)
 	last_rect = button_border_draw(screen,text_rect,button_select_flag)
 	#要用的变量初始化
@@ -62,15 +86,21 @@ if __name__ == "__main__":
 				break
 			elif(ev.type == pg.VIDEORESIZE): # 处理窗口大小调整事件
 				screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
+				scale_factor = _get_scale_factor(ev.size)
+                
+                # 重新计算字体大小
+				font_size = int(base_font_size * scale_factor)
+				font = pg.font.SysFont(None, font_size)
+
 				screen.fill((0, 0, 0))
-				text_rect = screen_interface(screen,font)
-				last_rect = button_border_draw(screen,text_rect,button_select_flag)
+				text_rect = screen_interface(screen,font,scale_factor)
+				last_rect = button_border_draw(screen,text_rect,button_select_flag,scale_factor)
 			elif(ev.type == pg.KEYDOWN): # 处理键盘按下事件
 				if(ev.key == pg.K_DOWN):
 					if(button_select_flag < 2):
 						button_border_clear(screen,last_rect)
 						button_select_flag += 1
-						last_rect = button_border_draw(screen,text_rect,button_select_flag)
+						last_rect = button_border_draw(screen,text_rect,button_select_flag,scale_factor)
 					elif(button_select_flag >= 2):
 						button_select_flag = 2
 					break
@@ -78,7 +108,7 @@ if __name__ == "__main__":
 					if(button_select_flag > 0):
 						button_border_clear(screen,last_rect)
 						button_select_flag -= 1
-						last_rect = button_border_draw(screen,text_rect,button_select_flag)
+						last_rect = button_border_draw(screen,text_rect,button_select_flag,scale_factor)
 					elif(button_select_flag <= 0):
 						button_select_flag = 0
 					break
