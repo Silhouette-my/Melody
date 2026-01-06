@@ -3,6 +3,16 @@ import os
 import numpy as py
 import pygame as pg
 
+def _get_scale_factor(screen_size):
+    """获取相对于800x600基准分辨率的缩放因子"""
+    base_width, base_height = 800, 600
+    width, height = screen_size
+    
+    # 计算宽高两个方向的缩放比例，取较小值以保证整体适配
+    scale_w = width / base_width
+    scale_h = height / base_height
+    return min(scale_w, scale_h)
+
 def flag_judge(flag_now,file_play_len,lower):
 	"""判断当前选中的曲目索引是否到达边界"""
 	if(flag_now == lower or flag_now == file_play_len-1):
@@ -11,6 +21,10 @@ def flag_judge(flag_now,file_play_len,lower):
 
 def text_draw(title_flag,font,screen_size,size_select):
 	"""在屏幕正中心绘制当前选中的曲目标题"""
+	scale_factor = _get_scale_factor(screen_size)
+	base_font_size = 50
+	font_size = int(base_font_size * scale_factor)
+	font = pg.font.SysFont(None, font_size)
 	text = title_song[title_flag]
 	text_image = font.render(text,True,'white')
 	text_rect = text_image.get_rect()
@@ -30,7 +44,10 @@ def text_draw(title_flag,font,screen_size,size_select):
 
 def attention_draw(screen,screen_size,size_select):
 	"""绘制闪烁的提示文字（按Enter开始）"""
-	font_attention = pg.font.SysFont(None,30)
+	scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
+	base_font_size = 30
+	font_size = int(base_font_size * scale_factor)
+	font_attention = pg.font.SysFont(None, font_size)
 	attention = "Press 'Enter' to start"
 	attention_image = font_attention.render(attention,True,'white')
 	attention_rect = attention_image.get_rect()
@@ -40,7 +57,8 @@ def attention_draw(screen,screen_size,size_select):
 		width, height = screen_size
 	else:
 		width, height = screen_size[size_select]
-	attention_rect.center = (width//2,height//2+50)
+	y_offset = int(50 * scale_factor)
+	attention_rect.center = (width//2,height//2+y_offset)
 
 	# 闪烁效果：使用时间控制显示/隐藏
 	blink_time = pg.time.get_ticks()/1000
