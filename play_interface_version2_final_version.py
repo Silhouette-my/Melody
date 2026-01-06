@@ -37,6 +37,7 @@ def rank_check(rank_level_judge,last_time,start_time):
 #
 
 def end_judge(note,note_read_sp):
+    """判断游戏是否结束：检查所有音符是否都已处理"""
     length_sum = len(note)-1
     use_sum = 0
     for i in range(0,4,1):
@@ -48,12 +49,14 @@ def end_judge(note,note_read_sp):
 #
 
 def list_space_initialize(target_list,dimension):
+    """初始化二维列表：创建dimension个空列表"""
     for i in range(0,dimension,1):
         temp = list()
         target_list.append(temp)
 #
 
 def note_time_initialize(note_storage,note,screen):
+    """初始化音符时间存储：将每个音符的出现时间按列存储"""
     length = len(note) #note的个数+1(Malody的note信息里面多了一个配置信息)
     s_height = pg.Surface.get_height(screen) #获取窗口宽度
 
@@ -63,6 +66,7 @@ def note_time_initialize(note_storage,note,screen):
 #
 
 def first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta,offset):
+    """计算第一个音符到达判定线的时间"""
     first_note_beat = note[0]['beat']  # 获取第一个note的拍数信息
     first_note_beat_value = first_note_beat[1]/first_note_beat[2]
     # 转换为时间
@@ -73,6 +77,7 @@ def first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta,offset):
 #
 
 def note_rect_initialize(note,rect_note_storage,screen,column_note_positions,beat_delta,fall_speed):
+    """初始化音符矩形：根据音符信息创建对应的矩形对象"""
     length = len(note)
     s_width = pg.Surface.get_width(screen)
     s_height = pg.Surface.get_height(screen)
@@ -83,11 +88,11 @@ def note_rect_initialize(note,rect_note_storage,screen,column_note_positions,bea
             note_type = 0
         else:
             note_type = 1
-        if(note_type):
+        if(note_type): # 普通音符
             rect = pg.Rect(0,-110,80,10) #rect对象的格式为(x,y,width,height),(x,y)是矩形左上角的坐标,剩下的是长宽
             rect.centerx = column_note_positions[note[i]['column']] #矩形中心横坐标
             rect_note_storage[note[i]['column']].append(rect)
-        elif(not note_type):
+        elif(not note_type): # 长条音符
             head_note_info = note[i]['beat']
             head_note_beat = head_note_info[0] + head_note_info[1]/head_note_info[2]
             end_note_info = note[i]['endbeat'] #获取长条结尾note
@@ -99,24 +104,27 @@ def note_rect_initialize(note,rect_note_storage,screen,column_note_positions,bea
 #
 
 def note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,current_time,s_height,fall_speed):
-    delta_t = s_height/fall_speed
+    """音符判定：检查哪些音符应该进入当前可见区域"""
+    delta_t = s_height/fall_speed # 音符从出现到到达判定线所需时间
     for i in range(0,4,1):
         length_time_list = len(note_storage[i])
-        sp_prev = note_read_sp[i]
+        sp_prev = note_read_sp[i] # 该列已读取的音符索引
         for j in range(sp_prev,length_time_list,1):
             note = note_storage[i][j]
-            if(note-current_time <= delta_t):
-                note_current[i].append(note)
-                rect_note_current[i].append(rect_note_storage[i][j])
-                note_read_sp[i] += 1
-            elif(note-current_time > delta_t):
+            if(note-current_time <= delta_t): # 如果音符应该进入屏幕
+                note_current[i].append(note) # 添加到当前时间列表
+                rect_note_current[i].append(rect_note_storage[i][j]) # 添加到当前矩形列表
+                note_read_sp[i] += 1 # 更新已读取索引
+            elif(note-current_time > delta_t): # 如果音符还没到出现时间
                 break
 #
 
 def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed):
+    """绘制音符：更新音符位置并绘制到屏幕上"""
     global display_text, text_display_start_time, combo, rank_level_judge
     s_height = pg.Surface.get_height(screen)
     current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
+    # 首先判定哪些音符应该进入当前可见区域
     note_judge(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,current_time,s_height,fall_speed)
     for i in range(0,4,1):
         j = 0
@@ -179,6 +187,7 @@ def note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect
 #
 
 def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge):
+    """评价判定：根据时间差判定perfect/good/bad/miss"""
     global display_text, text_display_start_time, combo, score, max_combo
     # 检查是否在窗口期内，如果是则保持原有文字不改变
     current_display_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
@@ -224,6 +233,7 @@ def rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,cur
 #
 
 def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_times,fall_speed,rank_level_judge):
+    """键盘事件处理：处理按键按下和释放事件"""
     global combo, score
     mapping_table = {pg.K_a: 0,
                      pg.K_s: 1,
@@ -239,38 +249,42 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
     current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec	
 
     if(keyboard_statement == 0):
-        if(not len(rect_note_current[key_use])):
+        if(not len(rect_note_current[key_use])): # 如果该轨道没有音符
             return
-        if(rect_note_current[key_use][0].y+rect_note_current[key_use][0].height <= s_height/2):
+        if(rect_note_current[key_use][0].y+rect_note_current[key_use][0].height <= s_height/2): # 如果音符还没到判定区域
             return
-        if(rect_note_current[key_use][0].height == 10):
-            judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
+        if(rect_note_current[key_use][0].height == 10): # 普通音符
+            judge_time_diff = np.fabs(note_current[key_use][0]-current_time) # 计算时间差
             rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge)
+            # 删除已判定的音符
             if(len(note_current[key_use]) > 0):
                 del note_current[key_use][0]
             if(len(rect_note_current[key_use]) > 0):
                 del rect_note_current[key_use][0]
-            column_statement[key_use] = 0
-        elif(rect_note_current[key_use][0].height > 10):
+            column_statement[key_use] = 0 # 重置轨道状态
+
+        elif(rect_note_current[key_use][0].height > 10): # 长条音符
             judge_time_diff = np.fabs(note_current[key_use][0]-current_time)
-            note_duration_time[key_use] = rect_note_current[key_use][0].height/fall_speed
-            column_lock_clock[key_use] = current_time
+            note_duration_time[key_use] = rect_note_current[key_use][0].height/fall_speed # 计算长条持续时间
+            column_lock_clock[key_use] = current_time # 记录按压开始时间
             rank_judge(judge_time_diff,key_use,screen,note_current,rect_note_current,current_time,lock_time,rank_level_judge)
-    elif(keyboard_statement == 1):
-        if(column_lock_clock[key_use] != 0):
-            if(len(rect_note_current[key_use]) > 0 and rect_note_current[key_use][0].height > 10):
-                if(note_duration_time[key_use]-current_time > 0.1):
-                    combo = 0
+    elif(keyboard_statement == 1): # 按键释放事件
+        if(column_lock_clock[key_use] != 0): # 如果之前有按压长条
+            if(len(rect_note_current[key_use]) > 0 and rect_note_current[key_use][0].height > 10): 
+                if(note_duration_time[key_use]-current_time > 0.1): # 如果提前释放长条
+                    combo = 0 # 连击中断
+                # 删除长条音符
                 if(len(note_current[key_use]) > 0):
                     del note_current[key_use][0]
                 if(len(rect_note_current[key_use]) > 0):
                     del rect_note_current[key_use][0]
-                note_duration_time[key_use] = 0
-                column_lock_clock[key_use] = 0
-                column_statement[key_use] = 1
+                note_duration_time[key_use] = 0 # 重置持续时间
+                column_lock_clock[key_use] = 0 # 重置锁定时间
+                column_statement[key_use] = 1 # 设置轨道状态
 #
 
 def long_note_height_change(col_idx, rect_note, elapsed_press_time, fall_speed):
+    """长条音符高度变化：根据按压时间缩短长条长度"""
     if rect_note.height <= 10:
         return None, True  # 已经结束
     
@@ -295,6 +309,7 @@ def long_note_height_change(col_idx, rect_note, elapsed_press_time, fall_speed):
 #
 
 def text_draw(screen):
+    """绘制评价文字和连击数（带淡出效果）"""
     global display_text, text_display_start_time, combo
     if display_text is None:
         return
@@ -344,6 +359,7 @@ def text_draw(screen):
 #
 
 def draw_score_display(screen):
+    """绘制左上角的分数显示面板"""
     global score, combo, max_combo, rank_level_judge
     
     s_width = pg.Surface.get_width(screen)
@@ -458,30 +474,32 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     # 重置分数相关全局变量
     reset_game_state()
     
-    note_storage = list()
+    note_storage = list()  # 存储所有音符的时间
     list_space_initialize(note_storage,4)
-    rect_note_storage = list()
+    rect_note_storage = list() # 存储所有音符的矩形
     list_space_initialize(rect_note_storage,4)
 
-    note_current = list()
+    note_current = list() # 存储当前可见的音符时间
     list_space_initialize(note_current,4)
-    rect_note_current = list()
+    rect_note_current = list() # 存储当前可见的音符矩形
     list_space_initialize(rect_note_current,4)
-    rect_upper_note_current = list()
+    rect_upper_note_current = list() # 存储当前可见的上层音符矩形（长条用）
     list_space_initialize(rect_upper_note_current,4)
 
-    note_read_sp = [0,0,0,0]
-    column_statement = [0,0,0,0]
-    column_lock_clock = [0,0,0,0]
-    note_duration_time = [0,0,0,0]
+    # 初始化各种状态变量
+    note_read_sp = [0,0,0,0] # 各轨道已读取的音符索引
+    column_statement = [0,0,0,0] # 各轨道的按键状态（0=未按下，1=已按下）
+    column_lock_clock = [0,0,0,0] # 各轨道的按键锁定时间
+    note_duration_time = [0,0,0,0] # 各轨道长条的剩余持续时间
     last_time = 0
     lock_time = 0
-    fall_speed = 750
-    final_offset_ms = current_latency + local_offset
+    fall_speed = 750 # 音符下落速度（像素/秒）
+    final_offset_ms = current_latency + local_offset # 最终偏移量
     time_offset_sec = final_offset_ms / 1000.0
     offset = final_offset_ms
 
     pg.init() #pygame初始化
+    # 设置主音量
     if pg.mixer.get_init():
         pg.mixer.music.set_volume(master_volume)
 
@@ -496,41 +514,47 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     for p in path:
         file = os.path.splitext(p)
         if(file[1] == '.json'):
-            file_play.append(p)
+            file_play.append(p) # 谱面文件
         elif(file[1] == '.ogg'):
-            song_player.append(p)
-            song_player_name.append(file[0])
+            song_player.append(p) # 音乐文件
+            song_player_name.append(file[0]) # 音乐文件名（不含扩展名）
+    # 选择谱面文件
     if file_path is not None:
         file_choose = file_path
     elif file_play:
         file_choose = file_play[0]
     else:
-        return None, local_offset
+        return None, local_offset # 没有谱面文件，返回
+    # 加载谱面文件
     with open(file_choose,'r',encoding = 'utf-8') as file:
         get_content = js.load(file)
     bpm = get_content['time'][0]['bpm'] #提取bpm信息
     beat_delta = 60.0/bpm # 一小节时长
-    note = get_content['note'] #??note??
-    beat_interval_ms = int(beat_delta * 1000)
+    note = get_content['note'] # 提取音符信息
+    beat_interval_ms = int(beat_delta * 1000) # 每拍时长（毫秒）
+    # 创建节拍器音效
     metronome_sound = None
     if pg.mixer.get_init():
         sample_rate = 44100
-        freq = 880
-        duration = 0.06
+        freq = 880 # 频率880Hz
+        duration = 0.06 # 持续时间60ms
         length = int(sample_rate * duration)
         buf = bytearray(length * 2)
         for i in range(length):
-            sample = 16000 if (i * freq * 2 // sample_rate) % 2 == 0 else -16000
+            sample = 16000 if (i * freq * 2 // sample_rate) % 2 == 0 else -16000 # 方波
             buf[i * 2:i * 2 + 2] = int(sample).to_bytes(2, byteorder="little", signed=True)
         metronome_sound = pg.mixer.Sound(buffer=bytes(buf))
 
 
-    title_song = get_content['meta']['song']['title']
+    title_song = get_content['meta']['song']['title'] # 获取歌曲标题
+    # 加载音乐文件
     for i in range(0,len(song_player),1):
         if(song_player_name[i] == title_song):
             pg.mixer.music.load(song_player[i]) 
             break
+
     def build_result():
+        """构建游戏结果数据"""
         total_hits = sum(rank_level_judge)
         if total_hits > 0:
             accuracy = (rank_level_judge[0] + rank_level_judge[1] * 0.5) / total_hits * 100
@@ -547,19 +571,21 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
             'accuracy': accuracy,
         }
 
-    #
+    # 创建游戏窗口
     if screen_size is None:
-        screen_sizes = [(800,600),(1280,760),(1920,1080)] #??????
-        size_select = 0 #????????(???????????????????????)
+        screen_sizes = [(800,600),(1280,760),(1920,1080)]
+        size_select = 0
         screen = pg.display.set_mode(screen_sizes[size_select], pg.RESIZABLE)
     else:
         screen = pg.display.set_mode(screen_size, pg.RESIZABLE)
-    #初始化窗口
 
+    # 创建背景表面
     background = pg.Surface(screen.get_size())
     background.fill((30, 30, 30))
     s_width = pg.Surface.get_width(screen)
     s_height = pg.Surface.get_height(screen)
+
+    # 轨道线位置（5条竖线，4个轨道）
     column_line_positions = [
         s_width/2-3*50,
         s_width/2-1*50,
@@ -567,7 +593,8 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         s_width/2+3*50,
         s_width/2+5*50
     ]
-    column_note_positions = [ #列的位置
+    # 音符位置（4个轨道的中心位置）
+    column_note_positions = [
         s_width/2-3*50,
         s_width/2-1*50,
         s_width/2+1*50,
@@ -575,7 +602,8 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     ]
     keyboard_map_use = [pg.K_a, pg.K_s, pg.K_k, pg.K_l]
 
-    first_arrival_time = first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta,offset)
+    first_arrival_time = first_note_time_calculate(note,bpm,s_height,fall_speed,beat_delta,offset) # 计算第一个音符到达时间
+    # 初始化音符数据
     note_time_initialize(note_storage,note,screen)
     note_rect_initialize(note,rect_note_storage,screen,column_note_positions,beat_delta,fall_speed)
     
@@ -591,6 +619,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     # 计算总时间：最后一个音符出现的时间 + 下落时间 + 2秒缓冲
     total_time = last_note_time + (s_height-100)/fall_speed + 2.0
 
+    # 初始化各种控制变量
     clock = pg.time.Clock()	#计时器
     isRunning = True
     music_play_flag = False
@@ -611,8 +640,9 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
     auto_play_hold = [False, False, False, False]
 
     while isRunning:
+        # 处理事件
         for ev in pg.event.get():
-            if(ev.type == pg.QUIT): #保证点右上角的x退出时不会卡死
+            if(ev.type == pg.QUIT): # 窗口关闭事件
                 keys = pg.key.get_pressed()
                 if keys[pg.K_ESCAPE] and not isEnd:
                     if esc_hold_start is None:
@@ -620,12 +650,13 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                     continue
                 isRunning = False
                 break
-            if ev.type == pg.VIDEORESIZE:
+            if ev.type == pg.VIDEORESIZE: # 窗口大小调整事件
                 screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
                 background = pg.Surface(screen.get_size())
                 background.fill((30, 30, 30))
                 s_width = pg.Surface.get_width(screen)
                 s_height = pg.Surface.get_height(screen)
+                # 重新计算轨道位置
                 column_line_positions = [
                     s_width/2-3*50,
                     s_width/2-1*50,
@@ -639,6 +670,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                     s_width/2+1*50,
                     s_width/2+3*50
                 ]
+                # 更新所有音符位置
                 for col in range(0,4):
                     for rect in rect_note_storage[col]:
                         rect.centerx = column_note_positions[col]
@@ -646,24 +678,25 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                         rect.centerx = column_note_positions[col]
                     for rect in rect_upper_note_current[col]:
                         rect.centerx = column_note_positions[col]
-            if(ev.type == pg.KEYDOWN):
-                if(ev.key == pg.K_ESCAPE):
-                    if isProgressEnd:
+            if(ev.type == pg.KEYDOWN): # 键盘按下事件
+                if(ev.key == pg.K_ESCAPE): # ESC键
+                    if isProgressEnd: # 如果游戏已结束(基于进度条结束判断)
                         isRunning = False
                         return build_result(), local_offset
                         break
-                    esc_hold_start = pg.time.get_ticks()
-                elif(ev.key == pg.K_q):
+                    esc_hold_start = pg.time.get_ticks() # 开始计时
+                elif(ev.key == pg.K_q): # Q键：切换自动播放
                     auto_play_enabled = not auto_play_enabled
                     auto_play_msg = "AUTO PLAY ON" if auto_play_enabled else "AUTO PLAY OFF"
                     auto_play_msg_time = pg.time.get_ticks()
-            if(ev.type == pg.KEYUP and ev.key == pg.K_ESCAPE):
+            if(ev.type == pg.KEYUP and ev.key == pg.K_ESCAPE): # ESC键释放事件
                 if esc_hold_start is not None:
                     if pg.time.get_ticks() - esc_hold_start < 2000 and not isEnd:
                         freeze_elapsed = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
                         if pg.mixer.get_init():
                             pg.mixer.music.pause()
-                        action, master_volume, local_offset = pause_interface.run_pause(screen, master_volume, local_offset)
+                        action, master_volume, local_offset = pause_interface.run_pause(screen, master_volume, local_offset) # 显示暂停界面
+                        #更新音量、偏移
                         if pg.mixer.get_init():
                             pg.mixer.music.set_volume(master_volume)
                         final_offset_ms = current_latency + local_offset
@@ -671,27 +704,31 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                         resume_metronome_active = True
                         resume_start_ms = pg.time.get_ticks()
                         resume_beat_index = 0
-                        if action == "quit":
+                        #处理暂停界面中的continue、restart和quit事件
+                        if action == "quit": #退出游玩
                             return None, local_offset
                             isRunning = False
                             break
-                        if action == "restart":
+                        if action == "restart": #重新开始
                             return "restart",local_offset
-                    elif not isEnd:
+                    elif not isEnd: # 长按esc：返回结果
                         if pg.mixer.get_init():
                             pg.mixer.music.stop()
                         return build_result(), local_offset
                 esc_hold_start = None
-            if(ev.type == pg.KEYDOWN):
+            if(ev.type == pg.KEYDOWN): # 普通按键按下
                 note_keyboard_judge(0,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
-            if(ev.type == pg.KEYUP):
+            if(ev.type == pg.KEYUP): # 普通按键释放
                 note_keyboard_judge(1,ev.key,screen,column_statement,column_lock_clock,note_duration_time,note_current,rect_note_current,rect_upper_note_current,lock_time,start_time,fall_speed,rank_level_judge)
 
+        # ESC键长按处理（2秒退出）
         now_ms = pg.time.get_ticks()
         if esc_hold_start is not None and now_ms - esc_hold_start >= 2000 and not isEnd:
             if pg.mixer.get_init():
                 pg.mixer.music.stop()
             return build_result(), local_offset
+
+        # 恢复节拍器处理（暂停后恢复时播放节拍器）
         if resume_metronome_active:
             start_time = pg.time.get_ticks()/1000.0 + time_offset_sec - freeze_elapsed
             if metronome_sound is not None:
@@ -703,6 +740,8 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
                 freeze_elapsed = None
                 if pg.mixer.get_init():
                     pg.mixer.music.unpause()
+
+        # 音乐开始播放控制
         if(pg.time.get_ticks()/1000 - start_time + time_offset_sec >= first_arrival_time and not music_play_flag and not resume_metronome_active):
             pg.mixer.music.play()
             music_play_flag = True
@@ -717,6 +756,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
 
         note_draw(note,note_storage,note_read_sp,rect_note_storage,note_current,rect_note_current,rect_upper_note_current,note_duration_time,column_statement,column_lock_clock,screen,fall_speed)
 
+        # 自动播放功能
         if auto_play_enabled:
             current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
             for lane in range(0,4):
@@ -734,15 +774,16 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
         # 绘制左上角记分器
         draw_score_display(screen)
         
-        # 绘制进度条
         current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
+        #进度条结束判断
         if(not isProgressEnd):
             isProgressEnd = draw_progress_bar(screen, current_time, total_time)
         else:
             isProgressEnd = draw_progress_bar(screen,total_time,total_time)
         
-        text_draw(screen)
+        text_draw(screen) # 绘制评价文字
 
+         # 绘制自动播放提示
         if auto_play_msg is not None:
             if pg.time.get_ticks() - auto_play_msg_time <= 1000:
                 msg_font = pg.font.SysFont(None, 28)
@@ -753,6 +794,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
             else:
                 auto_play_msg = None
 
+        # 音符读取结束判断
         if(not(end_judge(note,note_read_sp) and len(note_current))):
             last_time = rank_check(rank_level_judge,last_time,start_time)
         elif(isDoing == True):
@@ -761,6 +803,7 @@ def run_game(file_path=None, master_volume=1.0, current_latency=0, local_offset 
             combo = 0
             isDoing = False
 
+        # 进度条结束后停止音乐
         if isProgressEnd:
             if pg.mixer.get_init():
                 pg.mixer.music.stop()
