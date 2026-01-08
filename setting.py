@@ -162,14 +162,37 @@ def _run_latency_calibration(screen, font, small_font, clock, current_latency):
         clock.tick(60)
 
 
-def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
+def _is_desktop_size(size):
+    try:
+        return size in pg.display.get_desktop_sizes()
+    except Exception:
+        return False
+
+
+def _nearest_size_index(screen_sizes, current_size):
+    best_index = 0
+    best_diff = float("inf")
+    for i, (width, height) in enumerate(screen_sizes):
+        diff = abs(width - current_size[0]) + abs(height - current_size[1])
+        if diff < best_diff:
+            best_index = i
+            best_diff = diff
+    return best_index
+
+
+def _build_window_flags(window_maximized):
+    flags = pg.RESIZABLE
+    if window_maximized and hasattr(pg, "WINDOWMAXIMIZED"):
+        flags |= pg.WINDOWMAXIMIZED
+    return flags
+
+
+def run_settings(master_volume=1.0, latency_ms=0, screen_size=None, window_maximized=False):
     pg.init()
     screen_sizes = [(800, 600), (1280, 760), (1920, 1080)]
-    if screen_size in screen_sizes:
-        size_select = screen_sizes.index(screen_size)
-    else:
-        size_select = 0
-    screen = pg.display.set_mode(screen_sizes[size_select], pg.RESIZABLE)
+    current_size = screen_size or screen_sizes[0]
+    size_select = screen_sizes.index(current_size) if current_size in screen_sizes else None
+    screen = pg.display.set_mode(current_size, _build_window_flags(window_maximized))
     clock = pg.time.Clock()
     font = pg.font.SysFont(None, 50)
     small_font = pg.font.SysFont(None, 26)
@@ -190,7 +213,16 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
                 pg.quit()
                 sys.exit()
             if ev.type == pg.VIDEORESIZE:
-                screen = pg.display.set_mode(ev.size, pg.RESIZABLE)
+                current_size = ev.size
+                window_maximized = _is_desktop_size(current_size)
+                screen = pg.display.set_mode(current_size, _build_window_flags(window_maximized))
+                size_select = screen_sizes.index(current_size) if current_size in screen_sizes else None
+            window_event_type = getattr(pg, "WINDOWEVENT", None)
+            if window_event_type is not None and ev.type == window_event_type:
+                if ev.event == getattr(pg, "WINDOWEVENT_MAXIMIZED", None):
+                    window_maximized = True
+                elif ev.event == getattr(pg, "WINDOWEVENT_RESTORED", None):
+                    window_maximized = False
             if ev.type == pg.KEYDOWN:
                 if ev.key == pg.K_DOWN:
                     selected_index = min(selected_index + 1, 3)
@@ -209,11 +241,19 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
                         pg.mixer.music.set_volume(master_volume)
                     shared_state.MASTER_VOLUME = master_volume
                 elif ev.key == pg.K_LEFT and selected_index == 2:
+                    if size_select is None:
+                        size_select = _nearest_size_index(screen_sizes, current_size)
                     size_select = max(0, size_select - 1)
-                    screen = pg.display.set_mode(screen_sizes[size_select], pg.RESIZABLE)
+                    current_size = screen_sizes[size_select]
+                    window_maximized = False
+                    screen = pg.display.set_mode(current_size, _build_window_flags(window_maximized))
                 elif ev.key == pg.K_RIGHT and selected_index == 2:
+                    if size_select is None:
+                        size_select = _nearest_size_index(screen_sizes, current_size)
                     size_select = min(len(screen_sizes) - 1, size_select + 1)
-                    screen = pg.display.set_mode(screen_sizes[size_select], pg.RESIZABLE)
+                    current_size = screen_sizes[size_select]
+                    window_maximized = False
+                    screen = pg.display.set_mode(current_size, _build_window_flags(window_maximized))
                 elif ev.key == pg.K_RETURN:
                     if selected_index == 1:
                         latency_ms = _run_latency_calibration(screen, font, small_font, clock, latency_ms)
@@ -246,7 +286,10 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
         elif not keys[pg.K_ESCAPE]:
             esc_hold_start = None
 
-        size_label = f"{screen_sizes[size_select][0]}x{screen_sizes[size_select][1]}"
+        if size_select is None:
+            size_label = f"{current_size[0]}x{current_size[1]}"
+        else:
+            size_label = f"{screen_sizes[size_select][0]}x{screen_sizes[size_select][1]}"
         _render_menu(screen, font, small_font, master_volume, latency_ms, size_label, selected_index)
         pg.display.update()
         clock.tick(60)
@@ -254,7 +297,8 @@ def run_settings(master_volume=1.0, latency_ms=0, screen_size=None):
     return {
         "master_volume": master_volume,
         "latency_ms": latency_ms,
-        "screen_size": screen_sizes[size_select],
+        "screen_size": current_size,
+        "window_maximized": window_maximized,
     }
 
 

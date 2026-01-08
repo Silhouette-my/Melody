@@ -1,8 +1,30 @@
-import pygame
-import time
-import json
 import os
 import sys
+import json
+import time
+import pygame
+
+
+def _set_working_dir():
+    base_dir = getattr(sys, "_MEIPASS", os.path.abspath(os.path.dirname(__file__)))
+    os.chdir(base_dir)
+
+
+_set_working_dir()
+
+
+def _is_desktop_size(size):
+    try:
+        return size in pygame.display.get_desktop_sizes()
+    except Exception:
+        return False
+
+
+def _build_window_flags(window_maximized):
+    flags = pygame.RESIZABLE
+    if window_maximized and hasattr(pygame, "WINDOWMAXIMIZED"):
+        flags |= pygame.WINDOWMAXIMIZED
+    return flags
 
 # 引入已有的模块
 import main_interface       # 主菜单
@@ -25,7 +47,8 @@ STATE_SETTING= "setting"
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
+    window_maximized = False
+    screen = pygame.display.set_mode((800, 600), _build_window_flags(window_maximized))
     font = pygame.font.SysFont(None, 50)
     state = STATE_MENU
     title_flag = 0
@@ -58,9 +81,18 @@ def main():
                     if ev.type == pygame.QUIT:
                         pygame.quit()
                         sys.exit()
-                    elif ev.type == pygame.VIDEORESIZE:
+
+                    window_event_type = getattr(pygame, "WINDOWEVENT", None)
+                    if window_event_type is not None and ev.type == window_event_type:
+                        if ev.event == getattr(pygame, "WINDOWEVENT_MAXIMIZED", None):
+                            window_maximized = True
+                        elif ev.event == getattr(pygame, "WINDOWEVENT_RESTORED", None):
+                            window_maximized = False
+
+                    if ev.type == pygame.VIDEORESIZE:
                         screen_size = ev.size
-                        screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+                        window_maximized = _is_desktop_size(screen_size)
+                        screen = pygame.display.set_mode(screen_size, _build_window_flags(window_maximized))
                         screen.fill((0, 0, 0))
                         text_rect = main_interface.screen_interface(screen, font)
                         last_rect = main_interface.button_border_draw(screen, text_rect, selected_index)
@@ -114,7 +146,8 @@ def main():
                         sys.exit()
                     elif ev.type == pygame.VIDEORESIZE:
                         screen_size = ev.size
-                        screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+                        window_maximized = _is_desktop_size(screen_size)
+                        screen = pygame.display.set_mode(screen_size, _build_window_flags(window_maximized))
                     elif ev.type == pygame.KEYDOWN:
                         if ev.key == pygame.K_RETURN:
                             # 确认选曲
@@ -148,7 +181,7 @@ def main():
                 clock.tick(60)
 
         elif state == STATE_SETTING:
-            settings = setting.run_settings(master_volume, current_latency, screen_size)
+            settings = setting.run_settings(master_volume, current_latency, screen_size, window_maximized)
             if isinstance(settings, dict):
                 if "master_volume" in settings:
                     master_volume = settings["master_volume"]
@@ -157,8 +190,10 @@ def main():
                     current_latency = settings["latency_ms"]
                 if "screen_size" in settings:
                     screen_size = settings["screen_size"]
+                if "window_maximized" in settings:
+                    window_maximized = settings["window_maximized"]
             pygame.init()
-            screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+            screen = pygame.display.set_mode(screen_size, _build_window_flags(window_maximized))
             font = pygame.font.SysFont(None, 50)
             if pygame.mixer.get_init():
                 pygame.mixer.music.set_volume(master_volume)
@@ -191,7 +226,7 @@ def main():
                 state = STATE_RESULT
                 continue
             pygame.init()
-            screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+            screen = pygame.display.set_mode(screen_size, _build_window_flags(window_maximized))
             font = pygame.font.SysFont(None, 50)
             if pygame.mixer.get_init():
                 pygame.mixer.music.set_volume(master_volume)
@@ -202,14 +237,14 @@ def main():
             action = result.run_result(result_data or {}, screen_size)
             if action == "retry":
                 pygame.init()
-                screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+                screen = pygame.display.set_mode(screen_size, _build_window_flags(window_maximized))
                 font = pygame.font.SysFont(None, 50)
                 if pygame.mixer.get_init():
                     pygame.mixer.music.set_volume(master_volume)
                 state = STATE_PLAY
             else:
                 pygame.init()
-                screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
+                screen = pygame.display.set_mode(screen_size, _build_window_flags(window_maximized))
                 font = pygame.font.SysFont(None, 50)
                 if pygame.mixer.get_init():
                     pygame.mixer.music.set_volume(master_volume)

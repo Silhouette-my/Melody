@@ -100,7 +100,7 @@
 
 ### 引入资源
 开头先进行对库的引用和其它源代码文件的引用：
-```
+```python
 # 引入使用的库
 import pygame
 import time
@@ -118,7 +118,7 @@ import shared_state         # 共享状态
 
 ### 状态机定义
 然后是对状态机的各个状态进行规定：
-```
+```python
 STATE_MENU = "menu"     
 STATE_SELECT = "select"
 STATE_PLAY = "play"
@@ -129,7 +129,7 @@ STATE_SETTING= "setting"
 
 ### 初始化画面、状态和参数
 这一部分完成了对游戏基础设置（字体、音量、分辨率、延迟）的初始化
-```
+```python
 def main():
     
     # pygame初始化
@@ -161,7 +161,7 @@ def main():
 ##### 初始化
 初始化屏幕、界面选择相关以及 ESC 的判定
 
-```
+```python
  while True:
         if state == STATE_MENU:
             # 调用主菜单界面       
@@ -184,7 +184,7 @@ Enter：确认
 上下键：选择
 ESC：短按返回，长按退出
 
-```
+```python
             running = True
             while running:  # 游戏进行中
                 for ev in pygame.event.get():   # 遍历所有事件
@@ -243,7 +243,7 @@ ESC：短按返回，长按退出
 
 #### 选曲界面
 ##### 初始化
-```
+```python
 elif state == STATE_SELECT:
             # 调用选曲界面    
             clock = pygame.time.Clock() # 创建控制帧率的时钟对象
@@ -255,7 +255,7 @@ elif state == STATE_SELECT:
 
 ##### 主状态
 和主菜单一样的逻辑
-```
+```python
             while running:
                 for ev in pygame.event.get():
                     if ev.type == pygame.QUIT:
@@ -308,7 +308,7 @@ elif state == STATE_SELECT:
 
 #### 设置界面
 通过维护字典 settings 存储用户的设置，更新并将其传入，并根据设置调整参数。
-```
+```python
 elif state == STATE_SETTING:
             # 调用设置模块，返回字典 settings
             settings = setting.run_settings(master_volume, current_latency, screen_size)
@@ -339,7 +339,7 @@ elif state == STATE_SETTING:
 ##### 读取 json
 从目录下保存的歌曲 json（谱面）中获取相关信息
 
-```
+```python
  elif state == STATE_PLAY:
 
             master_volume = shared_state.MASTER_VOLUME  # 从共享状态中获取音量值
@@ -354,7 +354,7 @@ elif state == STATE_SETTING:
 
 ##### 调用游玩模块，更新音量
 
-```            
+```python
             result,new_local_offset = play.run_game(selected_song, master_volume, current_latency, local_offset, screen_size)   # 调用游玩模块
             
             # 更新音量
@@ -366,7 +366,7 @@ elif state == STATE_SETTING:
 ##### 处理重新开始部分
 重新加载 json，更新本地偏移
 
-```         
+```python
             # 重新开始
             if result == "restart":
                 with open(selected_song,'r') as f:
@@ -380,7 +380,7 @@ elif state == STATE_SETTING:
 ```
 
 ##### 结束后收拾
-```
+```python
             # 游戏结束后重置环境
             pygame.init()
             screen = pygame.display.set_mode(screen_size)
@@ -393,7 +393,7 @@ elif state == STATE_SETTING:
 #### 结果界面（并未启用，留作更新内容）
 ##### 初始化
 
-```
+```python
 # STATE_RESULT可删/留着做标准结果呈现界面
         elif state == STATE_RESULT:
             # 简单结果界面
@@ -412,7 +412,7 @@ elif state == STATE_SETTING:
 Enter：回到主菜单
 ESC：短按返回，长按退出
 
-```
+```python
             while waiting:
                 for ev in pygame.event.get():
                     if ev.type == pygame.QUIT:
@@ -440,16 +440,15 @@ ESC：短按返回，长按退出
 ```
 
 ### 结尾
-```
+```python
 if __name__ == "__main__":
     main()
 ```
 防止被别的函数调用
-
 ## pause_interface.py 暂停界面
 
 ### 引入库
-```
+```python
 import json as js
 import os
 import numpy as np
@@ -470,7 +469,7 @@ import sys
 
 #### 函数体
 根据参数渲染文本、确定位置并画到screen上
-```
+```python
 # 获取屏幕的宽高
 width = pg.Surface.get_width(screen)    
 height = pg.Surface.get_height(screen)
@@ -510,7 +509,7 @@ for i in range(len(text_use)):
 #### 函数体
 根据得到的宽和高计算按钮的位置，将其存入coordinate_text_use
 
-```
+```python
     # 计算中间矩形区域（9宫格的正中间）
     # 中间矩形左上角坐标：(width/3, height/3)
     # 中间矩形尺寸：(width/3, height/3)
@@ -582,7 +581,7 @@ for i in range(len(text_use)):
 - select_flag：当前选中文本的索引
 
 #### 函数体
-```
+```python
     # 扩展边界，这样边框不紧贴文字，更加美观
     border_x = text_rect[select_flag].x-5
 	border_y = text_rect[select_flag].y-5
@@ -601,7 +600,7 @@ for i in range(len(text_use)):
 ```
 
 ### button_border_clear 清除高亮框（改成黑色）
-```
+```python
 def button_border_clear(screen,last_rect):
 	pg.draw.rect(screen,'black',last_rect,1)
 ```
@@ -618,7 +617,7 @@ def button_border_clear(screen,last_rect):
 - slider_offset_rect：存放偏移调相关矩形
 
 #### 函数体
-```
+```python
     # 获取宽高
     width = pg.Surface.get_width(screen)
 	height = pg.Surface.get_height(screen)
@@ -696,7 +695,7 @@ def button_border_clear(screen,last_rect):
 ```
 
 ### slider_clear 清除滑动条
-```
+```python
 def slider_clear(screen,label,slider_volume_rect,slider_offset_rect):
 	if(label == 'volume'):
 		for i in range(0,2,1):
@@ -720,7 +719,7 @@ def slider_clear(screen,label,slider_volume_rect,slider_offset_rect):
 - current_offset：同上
 
 #### 初始化
-```
+```python
     # 获取宽高
     width = pg.Surface.get_width(screen)
 	height = pg.Surface.get_height(screen)
@@ -769,7 +768,7 @@ def slider_clear(screen,label,slider_volume_rect,slider_offset_rect):
 ```
 
 #### 主循环
-```
+```python
 	isRunning = True
 	while isRunning:
 		current_time = pg.time.get_ticks()
@@ -856,7 +855,7 @@ def slider_clear(screen,label,slider_volume_rect,slider_offset_rect):
 
 ### 主函数
 #### 定义与初始化
-```
+```python
 pg.init()
 
 # 定义菜单内容和参数
@@ -870,7 +869,7 @@ offset = 0
 ```
 
 ### 主程序
-```
+```python
 if __name__ == "__main__":      # 直接运行时才会执行
 	screen_size = [(800,600),(1280,760),(1920,1080)] 
 	size_select = 1     # 默认分辨率
@@ -878,7 +877,6 @@ if __name__ == "__main__":      # 直接运行时才会执行
 	run_pause(screen, 0.5, 0)   # 调用暂停
 	pg.quit()
 ```
-
 ##  setting.py 设置与延迟校准
 
 `setting.py` 模块负责处理游戏的设置选项（如音量、分辨率）以及核心的音频延迟校准功能。它通过返回一个包含设置信息的字典与主程序进行交互。
@@ -1083,134 +1081,6 @@ def _render_menu(screen, font, small_font, volume, latency_ms, size_label, selec
        "screen_size": screen_sizes[size_select],
    }
    ```
-
-这里是 `main_interface.py` 文件的详细功能介绍。
-
-~~~markdown
-## main_interface.py 主界面
-
-`main_interface.py` 负责绘制游戏的主菜单界面，包括游戏标题 "Melody" 和三个核心选项（Start, Settings, Exit）。它实现了自适应屏幕分辨率的布局逻辑。
-
-### 引入库
-```python
-import json as js
-import os
-import numpy as py
-import pygame as pg
-~~~
-
-- `pygame`：核心图形库。
-- `numpy`：虽然引入了但在此模块中未深度使用（可能是遗留代码）。
-
-### 全局配置
-
-```python
-MENU_ITEMS = ["Start", "Settings", "Exit"]
-```
-
-定义了主菜单显示的三个选项文本。
-
-### 辅助函数
-
-#### _get_scale_factor 获取缩放因子
-
-为了适配不同分辨率（如 800x600, 1280x760, 1920x1080），该函数计算当前屏幕尺寸相对于基准尺寸（800x600）的缩放比例。
-
-```python
-def _get_scale_factor(screen_size):
-    base_width, base_height = 800, 600
-    width, height = screen_size
-    # 取宽和高缩放比例的较小值，保证画面不被拉伸变形
-    scale_w = width / base_width
-    scale_h = height / base_height
-    return min(scale_w, scale_h)
-```
-
-### 界面绘制逻辑
-
-#### screen_interface 绘制主界面
-
-这是绘制静态UI的核心函数。它负责渲染标题和菜单按钮，并根据屏幕宽度自动计算间距。
-
-**参数**：
-
-- `screen`：绘制的目标表面。
-- `font`：传入的基础字体对象（虽然函数内部重新计算了大小）。
-
-**主要逻辑**：
-
-1. **动态计算字号**：
-   根据 `_get_scale_factor` 计算出的比例，动态调整菜单字体（基准50）和标题字体（基准80）的大小。
-
-   ```python
-   scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
-   font_size = int(50 * scale_factor)
-   font_title = pg.font.SysFont(None, int(80*scale_factor))
-   ```
-
-2. **绘制标题**：
-   将 "Melody" 绘制在屏幕水平居中、垂直中心偏上的位置。
-
-   ```python
-   title = "Melody"
-   title_rect.center = (mid_pos[0], mid_pos[1] - y_offset)
-   screen.blit(title_image, title_rect)
-   ```
-
-3. **计算菜单布局**：
-   为了使菜单项水平排列且居中，先计算所有文本的总宽度和间隔。
-
-   - `item_widths`：收集每个单词的宽度。
-   - `spacing`：根据屏幕宽度动态计算间隔（`s_width / 15 * scale_factor`）。
-   - `start_x`：计算整体的起始 X 坐标，公式为 `中点 - (总字宽 + 总间距)/2`。
-
-4. **绘制菜单项**：
-   遍历 `MENU_ITEMS`，依次在计算好的位置绘制文本，并将每个文本的 `Rect` 对象存储在 `text_rect` 列表中返回。
-
-   ```python
-   for i, item in enumerate(text):
-       # ... 渲染文本 ...
-       text_rects.center = (current_x + item_widths[i]/2, mid_pos[1] + y_offset)
-       screen.blit(text_images, text_rects)
-       # 更新下一个 X 坐标
-       current_x += item_widths[i] + spacing
-   ```
-
-### 交互反馈
-
-#### button_border_draw 绘制选中框
-
-在被选中的菜单项周围绘制一个白色边框。
-
-```python
-def button_border_draw(screen, text_rect, select_flag):
-    # 根据缩放因子调整边框的内边距(padding)和线宽
-    scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
-    border_x = text_rect[select_flag].x - int(5 * scale_factor)
-    # ... (计算 border_y, border_width, border_height)
-    
-    last_rect = pg.Rect(...)
-    pg.draw.rect(screen, border_color, last_rect, border_line_width)
-    return last_rect # 返回边框区域用于清除
-```
-
-#### button_border_clear 清除选中框
-
-用黑色矩形覆盖上一次绘制的边框，用于在切换选项时清除旧的高亮。
-
-```python
-def button_border_clear(screen, last_rect):
-    pg.draw.rect(screen, 'black', last_rect, 1) # 注意：这里用黑色重绘边框
-```
-
-### 独立测试模块
-
-`if __name__ == "__main__":` 块包含了一个独立的测试循环，允许直接运行此文件来预览界面效果。
-
-- **初始化**：设置 800x600 窗口。
-- **事件循环**：
-  - `VIDEORESIZE`：监听窗口大小改变，重新调用 `screen_interface` 重绘界面，实现响应式布局。
-  - `KEYDOWN (Right/Left)`：模拟主程序中的菜单切换逻辑，测试 `button_border_draw` 和 `button_border_clear` 的效果。
 
 ___
 
