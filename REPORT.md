@@ -53,6 +53,10 @@
 * **Master Volume**：主音量（左右调整）
 * **Latency Calibration**：延迟校准（按提示跟节拍）
 
+### 外挂 Auto_play
+
+* Q：开启/关闭
+
 进入校准后先播放 **4 声节拍器**，随后音符开始下落并可按提示点击校准。
 
 ---
@@ -90,7 +94,6 @@
 * `setting.py`：设置与延迟校准
 * `pause_interface.py`：暂停界面
 * `play_interface_version2_final_version.py`：游戏主逻辑
-* **Tip**：修改流速请在`play_interface_version2_final_version.py`中搜索fall_speed自行更改
 
 ## main.py 主流程与场景切换
 作为主函数，main.py 以状态机的形式对各个状态的执行逻辑进行了规定
