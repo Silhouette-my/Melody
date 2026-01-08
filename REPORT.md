@@ -871,3 +871,838 @@ if __name__ == "__main__":      # 直接运行时才会执行
 	run_pause(screen, 0.5, 0)   # 调用暂停
 	pg.quit()
 ```
+
+##  setting.py 设置与延迟校准
+
+`setting.py` 模块负责处理游戏的设置选项（如音量、分辨率）以及核心的音频延迟校准功能。它通过返回一个包含设置信息的字典与主程序进行交互。
+
+### 引入库
+
+```markdown
+import pygame as pg
+import shared_state
+import sys
+```
+
+- `pygame`：用于图形渲染、事件处理和音频播放。
+- `shared_state`：引用全局共享变量（如 `MASTER_VOLUME`），保证音量设置能在全局生效。
+- `sys`：用于在必要时退出程序。
+
+### 辅助绘图函数
+
+#### _draw_text_centered 居中绘制文本
+
+封装了基础的文本渲染逻辑，减少重复代码。
+
+```python
+def _draw_text_centered(screen, font, text, center):
+    text_image = font.render(text, True, "white")   # 渲染白色文本
+    text_rect = text_image.get_rect(center=center)  # 获取居中矩形
+    screen.blit(text_image, text_rect)              # 绘制到屏幕
+    return text_rect                                # 返回矩形区域供后续使用（如计算边框）
+```
+
+#### _button_border_draw 绘制按钮边框
+
+用于在当前选中的菜单项周围绘制一个白色边框，提示玩家当前的交互焦点。
+
+```python
+def _button_border_draw(screen, text_rect, select_flag):
+    # 计算边框位置，向外扩展 5 像素以留出留白
+    border_x = text_rect[select_flag].x - 5
+    border_y = text_rect[select_flag].y - 5
+    border_width = text_rect[select_flag].width + 10
+    border_height = text_rect[select_flag].height + 10
+    
+    last_rect = pg.Rect(border_x, border_y, border_width, border_height)
+    pg.draw.rect(screen, "white", last_rect, 1) # 绘制线宽为1的空心矩形
+    return last_rect
+```
+
+#### _draw_volume_row 绘制音量调节行
+
+这是一个专门用于绘制“音量调节”这一行的复杂绘制函数。它不仅显示文字，还动态绘制一个代表音量的进度条。
+
+```python
+def _draw_volume_row(screen, font, label, volume, center):
+    # 将 0.0-1.0 的音量转换为 0-100 的整数
+    value = max(0, min(100, int(round(volume * 100))))
+    
+    # 渲染标签和数值文字
+    label_image = font.render(label, True, "white")
+    value_image = font.render(str(value), True, "white")
+    
+    # 动态计算布局，确保整体居中
+    # ... (计算 slider_width, start_x 等坐标逻辑) ...
+
+    # 绘制标签
+    screen.blit(label_image, label_rect)
+    # 绘制代表音量的白色实心矩形（进度条）
+    pg.draw.rect(screen, "white", slider_rect)
+    # 绘制数值
+    screen.blit(value_image, value_rect)
+    
+    # 返回包含整行的矩形区域，用于 _button_border_draw 判定高亮范围
+    return pg.Rect(start_x, label_rect.y, total_width, label_rect.height)
+```
+
+### 界面渲染
+
+#### _render_menu 渲染设置菜单主界面
+
+该函数每帧被调用，负责将所有菜单项画到屏幕上。
+
+```python
+def _render_menu(screen, font, small_font, volume, latency_ms, size_label, selected_index):
+    screen.fill((0, 0, 0))  # 清屏
+    
+    # 绘制标题
+    width, height = screen.get_size()
+    _draw_text_centered(screen, font, "Settings", (width // 2, height // 6))
+
+    # 定义菜单项内容
+    items = [
+        f"Latency Calibration: {latency_ms} ms", # 显示当前校准的延迟
+        f"Screen Size: {size_label}",            # 显示当前分辨率
+        "Back",
+    ]
+    
+    rects = []
+    base_y = height // 2
+    
+    # 1. 绘制音量行（第一项，索引0）
+    rects.append(_draw_volume_row(screen, font, "Master Volume", volume, (width // 2, base_y)))
+    
+    # 2. 绘制其余文本选项
+    for i, text in enumerate(items, start=1):
+        rects.append(_draw_text_centered(screen, font, text, (width // 2, base_y + i * 60)))
+    
+    # 绘制底部操作提示
+    _draw_text_centered(screen, small_font, "Use Up/Down to select, Left/Right to adjust volume, Enter to confirm", (width // 2, height - 40))
+    
+    # 绘制当前选中项的边框
+    _button_border_draw(screen, rects, selected_index)
+    
+    return rects
+```
+
+### 延迟校准逻辑
+
+#### _run_latency_calibration 延迟校准微型游戏
+
+这是本模块的核心算法部分。它运行一个独立的循环，播放节拍并让玩家按下空格键，计算玩家输入与实际节拍的时间差，从而得出设备的音频延迟。
+
+**1. 音频合成**
+为了不依赖外部文件，代码直接生成方波音频作为节拍音效：
+
+```python
+    # 生成 880Hz 的方波数据
+    sample = 16000 if (i * freq * 2 // sample_rate) % 2 == 0 else -16000
+    buf[i * 2:i * 2 + 2] = int(sample).to_bytes(2, byteorder="little", signed=True)
+    beep = pg.mixer.Sound(buffer=bytes(buf))
+```
+
+**2. 视觉与时间同步**
+
+- `pre_beats`：预备拍（4拍），只响不判定。
+- `num_beats`：测试拍（6拍），用于记录玩家点击。
+- `speed`：计算圆圈下落速度，使其准确在节拍时间点到达判定线 `target_y`。
+
+**3. 判定循环**
+
+```python
+    while True:
+        now = pg.time.get_ticks()
+        
+        # 播放节拍音效逻辑
+        # ... 检查时间是否到达 pre_beat_times 或 beat_times ...
+
+        # 输入检测
+        for ev in pg.event.get():
+            if ev.type == pg.KEYDOWN:
+                # 玩家在听到节拍时按下 Space 或 Enter
+                if ev.key in (pg.K_SPACE, pg.K_RETURN) and beat_index < num_beats:
+                    offset = now - beat_times[beat_index] # 计算 实际按下时间 - 理论节拍时间
+                    hits.append(offset)
+                    beat_index += 1
+
+        # 视觉绘制：绘制移动的圆圈和判定线
+        pg.draw.line(screen, "white", (width // 2 - 60, target_y), (width // 2 + 60, target_y), 2) # 判定线
+        for beat_time in beat_times:
+            # 根据时间差计算圆圈的 Y 坐标
+            y = target_y - dt * speed
+            pg.draw.circle(screen, "white", (width // 2, int(y)), 12, 2)
+
+        # 结果计算
+        if beat_index >= num_beats and not waiting_for_result:
+            # 计算平均偏差作为延迟值
+            avg = sum(hits) / float(len(hits)) if hits else 0.0
+            current_latency = int(round(avg))
+            waiting_for_result = True # 进入结果展示状态
+```
+
+### 主设置循环
+
+#### run_settings 设置模块入口
+
+管理设置界面的主循环、事件监听和状态更新。
+
+**参数**：
+
+- `master_volume`, `latency_ms`, `screen_size`：当前的设置状态。
+
+**逻辑**：
+
+1. **初始化**：设置屏幕模式和字体。
+
+2. **事件循环**：
+
+   - **↑ / ↓**：修改 `selected_index` 切换菜单项。
+   - **← / →**：
+     - 若选中 **Master Volume**：直接修改 `master_volume` 变量，并调用 `pg.mixer.music.set_volume` 实时反馈，同时更新 `shared_state`。
+     - 若选中 **Screen Size**：切换分辨率索引，并立即调用 `pg.display.set_mode` 应用新分辨率。
+   - **Enter**：
+     - 若选中 **Latency Calibration**：调用 `_run_latency_calibration`，并将返回的新延迟值存入 `latency_ms`。
+     - 若选中 **Back**：退出循环。
+   - **Esc**：长按 2 秒退出或短按返回。
+
+3. **返回结果**：
+   函数最终返回一个字典，包含修改后的所有设置，供 `main.py` 更新全局状态：
+
+   ```python
+   return {
+       "master_volume": master_volume,
+       "latency_ms": latency_ms,
+       "screen_size": screen_sizes[size_select],
+   }
+   ```
+
+这里是 `main_interface.py` 文件的详细功能介绍。
+
+~~~markdown
+## main_interface.py 主界面
+
+`main_interface.py` 负责绘制游戏的主菜单界面，包括游戏标题 "Melody" 和三个核心选项（Start, Settings, Exit）。它实现了自适应屏幕分辨率的布局逻辑。
+
+### 引入库
+```python
+import json as js
+import os
+import numpy as py
+import pygame as pg
+~~~
+
+- `pygame`：核心图形库。
+- `numpy`：虽然引入了但在此模块中未深度使用（可能是遗留代码）。
+
+### 全局配置
+
+```python
+MENU_ITEMS = ["Start", "Settings", "Exit"]
+```
+
+定义了主菜单显示的三个选项文本。
+
+### 辅助函数
+
+#### _get_scale_factor 获取缩放因子
+
+为了适配不同分辨率（如 800x600, 1280x760, 1920x1080），该函数计算当前屏幕尺寸相对于基准尺寸（800x600）的缩放比例。
+
+```python
+def _get_scale_factor(screen_size):
+    base_width, base_height = 800, 600
+    width, height = screen_size
+    # 取宽和高缩放比例的较小值，保证画面不被拉伸变形
+    scale_w = width / base_width
+    scale_h = height / base_height
+    return min(scale_w, scale_h)
+```
+
+### 界面绘制逻辑
+
+#### screen_interface 绘制主界面
+
+这是绘制静态UI的核心函数。它负责渲染标题和菜单按钮，并根据屏幕宽度自动计算间距。
+
+**参数**：
+
+- `screen`：绘制的目标表面。
+- `font`：传入的基础字体对象（虽然函数内部重新计算了大小）。
+
+**主要逻辑**：
+
+1. **动态计算字号**：
+   根据 `_get_scale_factor` 计算出的比例，动态调整菜单字体（基准50）和标题字体（基准80）的大小。
+
+   ```python
+   scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
+   font_size = int(50 * scale_factor)
+   font_title = pg.font.SysFont(None, int(80*scale_factor))
+   ```
+
+2. **绘制标题**：
+   将 "Melody" 绘制在屏幕水平居中、垂直中心偏上的位置。
+
+   ```python
+   title = "Melody"
+   title_rect.center = (mid_pos[0], mid_pos[1] - y_offset)
+   screen.blit(title_image, title_rect)
+   ```
+
+3. **计算菜单布局**：
+   为了使菜单项水平排列且居中，先计算所有文本的总宽度和间隔。
+
+   - `item_widths`：收集每个单词的宽度。
+   - `spacing`：根据屏幕宽度动态计算间隔（`s_width / 15 * scale_factor`）。
+   - `start_x`：计算整体的起始 X 坐标，公式为 `中点 - (总字宽 + 总间距)/2`。
+
+4. **绘制菜单项**：
+   遍历 `MENU_ITEMS`，依次在计算好的位置绘制文本，并将每个文本的 `Rect` 对象存储在 `text_rect` 列表中返回。
+
+   ```python
+   for i, item in enumerate(text):
+       # ... 渲染文本 ...
+       text_rects.center = (current_x + item_widths[i]/2, mid_pos[1] + y_offset)
+       screen.blit(text_images, text_rects)
+       # 更新下一个 X 坐标
+       current_x += item_widths[i] + spacing
+   ```
+
+### 交互反馈
+
+#### button_border_draw 绘制选中框
+
+在被选中的菜单项周围绘制一个白色边框。
+
+```python
+def button_border_draw(screen, text_rect, select_flag):
+    # 根据缩放因子调整边框的内边距(padding)和线宽
+    scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
+    border_x = text_rect[select_flag].x - int(5 * scale_factor)
+    # ... (计算 border_y, border_width, border_height)
+    
+    last_rect = pg.Rect(...)
+    pg.draw.rect(screen, border_color, last_rect, border_line_width)
+    return last_rect # 返回边框区域用于清除
+```
+
+#### button_border_clear 清除选中框
+
+用黑色矩形覆盖上一次绘制的边框，用于在切换选项时清除旧的高亮。
+
+```python
+def button_border_clear(screen, last_rect):
+    pg.draw.rect(screen, 'black', last_rect, 1) # 注意：这里用黑色重绘边框
+```
+
+### 独立测试模块
+
+`if __name__ == "__main__":` 块包含了一个独立的测试循环，允许直接运行此文件来预览界面效果。
+
+- **初始化**：设置 800x600 窗口。
+- **事件循环**：
+  - `VIDEORESIZE`：监听窗口大小改变，重新调用 `screen_interface` 重绘界面，实现响应式布局。
+  - `KEYDOWN (Right/Left)`：模拟主程序中的菜单切换逻辑，测试 `button_border_draw` 和 `button_border_clear` 的效果。
+
+___
+
+## main_interface.py 主界面
+
+`main_interface.py` 负责绘制游戏的主菜单界面，包括游戏标题 "Melody" 和三个核心选项（Start, Settings, Exit）。它实现了自适应屏幕分辨率的布局逻辑。
+
+### 引入库
+
+```markdown
+import json as js
+import os
+import numpy as py
+import pygame as pg
+```
+
+- `pygame`：核心图形库。
+- `numpy`：虽然引入了但在此模块中未深度使用（可能是遗留代码）。
+
+### 全局配置
+
+```python
+MENU_ITEMS = ["Start", "Settings", "Exit"]
+```
+
+定义了主菜单显示的三个选项文本。
+
+### 辅助函数
+
+#### _get_scale_factor 获取缩放因子
+
+为了适配不同分辨率（如 800x600, 1280x760, 1920x1080），该函数计算当前屏幕尺寸相对于基准尺寸（800x600）的缩放比例。
+
+```python
+def _get_scale_factor(screen_size):
+    base_width, base_height = 800, 600
+    width, height = screen_size
+    # 取宽和高缩放比例的较小值，保证画面不被拉伸变形
+    scale_w = width / base_width
+    scale_h = height / base_height
+    return min(scale_w, scale_h)
+```
+
+### 界面绘制逻辑
+
+#### screen_interface 绘制主界面
+
+这是绘制静态UI的核心函数。它负责渲染标题和菜单按钮，并根据屏幕宽度自动计算间距。
+
+**参数**：
+
+- `screen`：绘制的目标表面。
+- `font`：传入的基础字体对象（虽然函数内部重新计算了大小）。
+
+**主要逻辑**：
+
+1. **动态计算字号**：
+   根据 `_get_scale_factor` 计算出的比例，动态调整菜单字体（基准50）和标题字体（基准80）的大小。
+
+   ```python
+   scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
+   font_size = int(50 * scale_factor)
+   font_title = pg.font.SysFont(None, int(80*scale_factor))
+   ```
+
+2. **绘制标题**：
+   将 "Melody" 绘制在屏幕水平居中、垂直中心偏上的位置。
+
+   ```python
+   title = "Melody"
+   title_rect.center = (mid_pos[0], mid_pos[1] - y_offset)
+   screen.blit(title_image, title_rect)
+   ```
+
+3. **计算菜单布局**：
+   为了使菜单项水平排列且居中，先计算所有文本的总宽度和间隔。
+
+   - `item_widths`：收集每个单词的宽度。
+   - `spacing`：根据屏幕宽度动态计算间隔（`s_width / 15 * scale_factor`）。
+   - `start_x`：计算整体的起始 X 坐标，公式为 `中点 - (总字宽 + 总间距)/2`。
+
+4. **绘制菜单项**：
+   遍历 `MENU_ITEMS`，依次在计算好的位置绘制文本，并将每个文本的 `Rect` 对象存储在 `text_rect` 列表中返回。
+
+   ```python
+   for i, item in enumerate(text):
+       # ... 渲染文本 ...
+       text_rects.center = (current_x + item_widths[i]/2, mid_pos[1] + y_offset)
+       screen.blit(text_images, text_rects)
+       # 更新下一个 X 坐标
+       current_x += item_widths[i] + spacing
+   ```
+
+### 交互反馈
+
+#### button_border_draw 绘制选中框
+
+在被选中的菜单项周围绘制一个白色边框。
+
+```python
+def button_border_draw(screen, text_rect, select_flag):
+    # 根据缩放因子调整边框的内边距(padding)和线宽
+    scale_factor = _get_scale_factor(pg.Surface.get_size(screen))
+    border_x = text_rect[select_flag].x - int(5 * scale_factor)
+    # ... (计算 border_y, border_width, border_height)
+    
+    last_rect = pg.Rect(...)
+    pg.draw.rect(screen, border_color, last_rect, border_line_width)
+    return last_rect # 返回边框区域用于清除
+```
+
+#### button_border_clear 清除选中框
+
+用黑色矩形覆盖上一次绘制的边框，用于在切换选项时清除旧的高亮。
+
+```python
+def button_border_clear(screen, last_rect):
+    pg.draw.rect(screen, 'black', last_rect, 1) # 注意：这里用黑色重绘边框
+```
+
+### 独立测试模块
+
+`if __name__ == "__main__":` 块包含了一个独立的测试循环，允许直接运行此文件来预览界面效果。
+
+- **初始化**：设置 800x600 窗口。
+- **事件循环**：
+  - `VIDEORESIZE`：监听窗口大小改变，重新调用 `screen_interface` 重绘界面，实现响应式布局。
+  - `KEYDOWN (Right/Left)`：模拟主程序中的菜单切换逻辑，测试 `button_border_draw` 和 `button_border_clear` 的效果。
+
+## song_selection.py 选曲界面
+
+`song_selection.py` 模块负责扫描游戏目录下的谱面文件，并提供一个可视化的列表供玩家选择曲目。它实现了歌曲标题的解析、列表导航以及简单的视觉特效（如文字闪烁）。
+
+### 引入库与全局初始化
+
+```markdown
+import json as js
+import os
+import numpy as py
+import pygame as pg
+```
+
+在模块加载时，脚本会立即执行文件扫描逻辑，以便其他模块（如 `main.py`）导入时能直接获取歌曲列表。
+
+**1. 扫描谱面文件**
+
+```python
+# 获取当前工作目录
+root = os.getcwd()
+path = os.listdir(root)
+
+# 初始化存储列表
+file_play = []  # 存储谱面文件路径 (e.g., "song1.json")
+title_song = [] # 存储解析出的曲目标题 (e.g., "My Song")
+
+for p in path:
+    type_file = os.path.splitext(p)
+    if type_file[1] == '.json': # 筛选 .json 文件
+        try:
+            with open(p, 'r', encoding='utf-8') as file:
+                get_content = js.load(file)
+            # 提取 meta.song.title 字段
+            title = get_content.get('meta', {}).get('song', {}).get('title')
+            if title:
+                file_play.append(p)
+                title_song.append(title)
+        # ... 异常处理 ...
+```
+
+这段代码遍历文件夹，打开每一个 `.json` 文件，解析其元数据（Meta Data），将有效的文件名和对应的歌曲标题分别存入 `file_play` 和 `title_song` 列表供外部调用。
+
+### 辅助逻辑函数
+
+#### flag_judge 边界判断
+
+用于检测当前选中的索引（`flag_now`）是否到达了列表的顶部或底部，防止数组越界。
+
+```python
+def flag_judge(flag_now, file_play_len, lower):
+    # 如果到达下界(lower) 或 上界(length-1)，返回 0 (不可移动)
+    # 否则返回 1 (可移动)
+    if(flag_now == lower or flag_now == file_play_len-1):
+        return 0;
+    else: 
+        return 1;
+```
+
+#### text_replace 区域清除
+
+用于在更新文字前清除旧的文字区域（用黑色填充），避免文字重叠。
+
+```python
+def text_replace(screen, last_rect):
+    pg.draw.rect(surface=screen, color='black', rect=last_rect)
+```
+
+### 绘制函数
+
+#### text_draw 绘制歌曲标题
+
+负责在屏幕正中央显示当前选中的歌曲名称。
+
+```python
+def text_draw(title_flag, font, screen_size, size_select):
+    # 根据屏幕尺寸动态调整字号
+    scale_factor = _get_scale_factor(screen_size)
+    font_size = int(50 * scale_factor)
+    font = pg.font.SysFont(None, font_size)
+    
+    # 获取当前标题
+    text = title_song[title_flag]
+    text_image = font.render(text, True, 'white')
+    text_rect = text_image.get_rect()
+
+    # 居中定位
+    width, height = screen_size if isinstance(screen_size[0], int) else screen_size[size_select]
+    text_rect.center = (width//2, height//2)
+
+    # 绘制
+    surface = pg.display.get_surface()
+    if surface is not None:
+        surface.blit(text_image, text_rect)
+    return text_rect # 返回矩形以便后续清除
+```
+
+#### attention_draw 绘制闪烁提示
+
+绘制 "Press 'Enter' to start" 提示语，并利用时间戳实现闪烁效果。
+
+```python
+def attention_draw(screen, screen_size, size_select):
+    # ... (字号与位置计算) ...
+    
+    # 闪烁逻辑
+    blink_time = pg.time.get_ticks() / 1000
+    blink_speed = 1.5    # 周期 1.5秒
+    blink_duration = 0.8 # 显示 0.8秒
+    
+    if(blink_time % blink_speed < blink_duration):
+        screen.blit(attention_image, attention_rect) # 显示
+    else:
+        text_replace(screen, attention_rect)         # 隐藏（清除）
+```
+
+### 独立运行测试
+
+`if __name__ == "__main__":` 块提供了独立的选曲界面预览功能：
+
+1. **初始化**：设置窗口，加载字体。
+2. **首次绘制**：调用 `text_draw` 显示第一首歌。
+3. **主循环**：
+   - **边界检测**：调用 `flag_judge` 判断能否向上或向下翻页。
+   - **事件处理**：
+     - `K_DOWN`：若未到底，清除旧标题，`title_flag + 1`，绘制新标题。
+     - `K_UP`：若未到顶，清除旧标题，`title_flag - 1`，绘制新标题。
+     - `VIDEORESIZE`：响应窗口缩放，重绘界面。
+   - **特效更新**：每帧调用 `attention_draw` 刷新提示语的闪烁状态。
+
+
+
+## play_interface_version2_final_version.py 游戏主逻辑
+
+此文件包含游戏的核心玩法循环，负责音符的生成、下落、判定、得分计算、长条音符处理以及界面渲染。它是整个项目中最复杂、代码量最大的模块。
+
+### 核心数据结构
+
+#### 全局状态变量
+为了在不同函数间共享游戏状态，使用了大量全局变量（注：在大型项目中通常建议封装为类，但此处为了教学直观使用了全局变量）：
+*   `score` / `combo` / `max_combo`：记分系统。
+*   `rank_level_judge`：统计 Perfect/Good/Bad/Miss 的数量。
+*   `note_read_sp`：记录每个轨道（4轨）当前读取到了第几个音符，优化遍历性能。
+*   `column_statement` / `column_lock_clock`：用于长条音符（Long Note）的按压状态锁定。
+
+### 初始化与预处理
+
+#### note_time_initialize / note_rect_initialize
+这两个函数在游戏开始前将 JSON 谱面数据转换为游戏可用的对象。
+*   `note_time_initialize`：解析每个音符的 `beat`（节拍），结合 BPM 计算出它们的**绝对出现时间**（秒），并按轨道分类存储到 `note_storage` 二维列表中。
+*   `note_rect_initialize`：根据音符类型创建 `pygame.Rect` 对象。
+    *   **普通音符**：创建高度为 10 的矩形。
+    *   **长条音符**：计算结束拍与开始拍的时间差，生成对应长度的长矩形。
+
+#### first_note_time_calculate
+计算第一颗音符到达判定线的时间，用于确定音乐播放的起始延迟，确保音画同步。
+
+### 核心游戏循环 (run_game)
+
+`run_game` 是外部调用的入口函数。它初始化 Pygame 窗口、加载音乐和谱面，然后进入 `while isRunning` 主循环。
+
+#### 1. 时间管理与同步
+```python
+current_time = pg.time.get_ticks()/1000.0 - start_time + time_offset_sec
+```
+
+游戏的核心驱动力是 `current_time`。所有音符的位置、动画和音乐播放都依赖于这个经过校准的时间戳。
+
+- `start_time`：游戏开始时的系统时间。
+- `time_offset_sec`：包含用户校准的延迟（Latency）和谱面自身的偏移（Offset）。
+
+#### 2. 音符逻辑 (note_judge & note_draw)
+
+这是每一帧最繁重的任务：
+
+1. **判定可见性 (`note_judge`)**：检查 `note_storage` 中哪些音符的时间已经到了“进入屏幕”的时刻。将它们从“存储区”移动到“当前显示区” (`rect_note_current`)。
+2. **位置更新 (`note_draw`)**：
+   - 根据 `current_time` 和 `note_time` 的差值，乘以 `fall_speed`，计算每个音符当前的 Y 坐标。
+   - **长条特殊处理**：如果是一个正在被按住的长条，调用 `long_note_height_change`，根据按压时长实时缩短矩形的高度（模拟“吃掉”长条的效果）。
+   - **Miss 判定**：如果音符的 Y 坐标超过了屏幕下方（且未被击打），判定为 Miss，重置 Combo。
+
+#### 3. 输入判定 (note_keyboard_judge)
+
+处理玩家的键盘事件 (`KEYDOWN` / `KEYUP`)。
+
+- **普通音符**：
+  - 当按下键时，检查该轨道最下方的音符。
+  - 计算 `abs(note_time - current_time)`。
+  - 调用 `rank_judge` 根据时间差判定 Perfect (<50ms), Good (<80ms), Bad (<120ms) 或 Miss。
+- **长条音符**：
+  - **按下 (`KEYDOWN`)**：判定头部的时间差，如果命中，设置 `column_lock_clock` 记录开始按压时间，并将 `note_duration_time` 设为长条时长。
+  - **抬起 (`KEYUP`)**：检查是否过早松开。如果长条还没结束就松手，会触发 Combo 中断（视为断连）。
+
+#### 4. 视觉反馈
+
+- **判定线**：绘制固定的 4 条轨道线和底部黄色的判定线。
+- **文字特效 (`text_draw`)**：在屏幕中央显示当前的评价（Perfect/Good...）和 Combo 数。包含淡出（Alpha）动画逻辑。
+- **UI 面板 (`draw_score_display`)**：在左上角实时更新分数、准确率和各判定数量。
+- **进度条 (`draw_progress_bar`)**：在底部绘制歌曲进度，当进度条满时触发游戏结束逻辑。
+
+#### 5. 自动播放 (Auto Play)
+
+代码中包含了一个隐藏的 Auto Play 功能（按 `Q` 键切换）。
+
+```python
+if auto_play_enabled:
+    # 遍历当前音符，如果时间差 < 0.02秒，自动调用 note_keyboard_judge 模拟按键
+    if abs(note_current[lane][0] - current_time) <= 0.02:
+        # ... 模拟按下 ...
+```
+
+这对于测试谱面和判定逻辑非常有用。
+
+#### 6. 暂停与恢复
+
+当按下 `ESC` 时，游戏进入暂停状态。
+
+- 记录 `freeze_elapsed`，在恢复时修正 `start_time`，确保暂停期间游戏时间不流逝。
+- 从暂停返回时，激活 `resume_metronome_active`，播放 4-8 拍的节拍器倒计时，给玩家反应时间，然后再恢复音乐和音符下落。
+
+### 结果结算
+
+当音乐播放完毕且所有音符处理完成后，函数打包当前的统计数据（Score, Accuracy, Perfect数等），返回给 `main.py` 以便显示结算画面。
+
+```python
+return {
+    'title': title_song,
+    'score': score,
+    'accuracy': accuracy,
+    # ...
+}, local_offset
+
+```
+
+## result.py 结算界面
+
+`result.py` 负责在单局游戏结束后展示详细的成绩统计，包括分数、评级、Max Combo 以及具体的 Perfect/Good/Bad/Miss 数量。
+
+### 引入库与辅助函数
+
+```markdown
+import pygame as pg
+import sys
+```
+
+#### _grade_from_accuracy 评级计算
+
+根据准确率（Accuracy）返回对应的等级字符串。
+
+- **SS**: 100%
+- **S**: ≥ 98%
+- **A**: ≥ 95%
+- **B**: ≥ 90%
+- **C**: ≥ 80%
+- **D**: < 80%
+
+#### _grade_color 评级颜色
+
+为每个等级返回对应的 RGB 颜色元组，例如 SS 为金色 `(255, 215, 0)`，D 为红色 `(255, 120, 120)`。
+
+#### _draw_vignette 晕影效果
+
+为了让界面看起来更有质感，这个函数在屏幕上绘制一个径向渐变的黑色遮罩（Vignette）。
+
+```python
+def _draw_vignette(screen, strength=110):
+    # ... 创建带 alpha 通道的 surface ...
+    # 从中心向外绘制透明度逐渐增加的圆环
+    for r in range(max_radius, 0, -40):
+        # ...
+        pg.draw.circle(overlay, (0, 0, 0, alpha), center, r)
+```
+
+### 主逻辑函数 (run_result)
+
+接收 `result_data`（由 `play_interface` 生成的字典）并渲染界面。
+
+**参数**：
+
+- `result_data`：包含 score, max_combo, accuracy 等数据的字典。
+- `screen_size`：当前窗口大小。
+
+**绘制布局**：
+界面布局采用了相对坐标与固定偏移结合的方式，利用 `_get_scale_factor` 确保在不同分辨率下元素位置合理。
+
+- **Top**: 显示巨大的 "RESULT" 标题。
+- **Center**:
+  - 中央显示硕大的等级字母（如 S）。
+  - 字母下方显示总分（Score）。
+  - 左侧显示 Max Combo 和 Accuracy。
+  - 右侧分列显示详细判定数（Perfect, Great, Bad, Miss）。
+- **Bottom**: 显示歌曲名称和 "Retry / Back" 选项按钮。
+
+**交互逻辑**：
+
+- **↑ / ↓**：切换 Retry 或 Back 选项。
+- **Enter**：确认选择。返回字符串 `"retry"` 或 `"back"` 给主程序。
+- **Esc**：作为 Back 的快捷键。
+
+此界面的设计重点在于清晰的信息层级，让玩家一眼能看到最重要的等级和分数，同时也能查阅详细的发挥情况。
+
+------
+
+## auto_play_bot.py 自动游玩脚本 (外挂)
+
+这是一个独立于游戏主程序的外部 Python 脚本。它不通过读取内存或游戏代码运行，而是像人类玩家一样“看”屏幕并“按”键盘。这通常被称为“视觉脚本”或“物理外挂”。
+
+### 引入库
+
+```python
+import mss          # 用于极速屏幕截图
+import numpy as np  # 用于高效处理图像数组
+import keyboard     # 用于模拟键盘按键 (A/S/K/L)
+```
+
+### 核心配置
+
+脚本开头定义了针对特定分辨率（2560x1600）的坐标参数。如果要适配你的屏幕，需要修改这些值。
+
+```python
+Y_SCAN = 1373       # 判定线的 Y 轴坐标（扫描这一行像素）
+X_LANES = [1031, 1190, 1324, 1470] # 四个轨道的 X 轴坐标
+BLUE_THRESHOLD = 100 # 判定阈值（蓝色通道值）
+```
+
+### 工作原理 (Main Loop)
+
+脚本运行在一个无限循环中，追求极致的响应速度。
+
+#### 1. 屏幕捕获 (mss)
+
+```python
+with mss.mss() as sct:
+    monitor = {"top": Y_SCAN, "left": 0, "width": 2560, "height": 1, ...}
+    img = np.array(sct.grab(monitor))
+```
+
+- 它**只截取判定线所在的这一行像素**（Height = 1）。
+- 相比截取全屏，这种方式数据量极小，处理速度非常快，能实现极低的延迟。
+
+#### 2. 视觉分析
+
+遍历四个轨道对应的 X 坐标，检查该点的像素颜色。
+
+```python
+blue_value = img[0, x, 0] # 获取 BGR 中的 Blue 分量
+note_detected = blue_value > BLUE_THRESHOLD
+```
+
+- 游戏中的音符是白色的（RGB 255,255,255）。
+- 背景是深色的。
+- 只要蓝色分量足够高（>100），脚本就认为“音符到了”。
+
+#### 3. 模拟输入
+
+```python
+if note_detected:
+    if not key_states[i]:
+        keyboard.press(KEYS[i]) # 模拟按下
+        key_states[i] = True
+else:
+    if key_states[i]:
+        keyboard.release(KEYS[i]) # 模拟松开
+        key_states[i] = False
+```
+
+- **按下逻辑**：当检测到音符且当前按键未按下时，触发 `press`。
+- **松开逻辑**：当音符消失（像素变暗）且当前按键是按下状态时，触发 `release`。
+- 这种逻辑天然支持**长条音符**（Long Note），因为长条经过判定线时像素一直保持亮色，脚本就会一直按住不放。
+
+### 使用说明
+
+此脚本需要独立运行，并且通常需要管理员权限（在 Windows 下）才能向全屏游戏发送按键指令。
+
