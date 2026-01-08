@@ -53,6 +53,10 @@
 * **Master Volume**：主音量（左右调整）
 * **Latency Calibration**：延迟校准（按提示跟节拍）
 
+### 外挂 Auto_play
+
+* Q：开启/关闭
+
 进入校准后先播放 **4 声节拍器**，随后音符开始下落并可按提示点击校准。
 
 ---
@@ -75,6 +79,10 @@
 1. 在写进度条函数时，刚开始并没有对total_time进行判断，这导致了total_time等于0时，计算百分比的算式会发生除以0的错误，total_time小于0时，会导致绘制进度条矩形异常，破坏游戏体验。
 2. 由于之前没有系统学习Python语言和pygame库函数，因此要先学习pg.font.SysFont和.render以及screen.blit等用于屏幕显示的函数，同时学习了如何实现颜色渐变等功能。
 
+### @Aleph-000
+1. 窗口尺寸与适配有问题，最大化/改变分辨率后文字消失、布局错位，需要加入 VIDEORESIZE 处理并重新计算布局
+2. 代码合并经常出现 merge 冲突标记、return 在函数外、变量未定义等，导致运行中断，后面一处一处校对merge
+3. 音量/延迟参数同步时，设置界面与暂停界面音量不一致，延迟校准与游戏判定偏差，需要统一全局状态并正确传递
 
 ---
 
@@ -86,7 +94,6 @@
 * `setting.py`：设置与延迟校准
 * `pause_interface.py`：暂停界面
 * `play_interface_version2_final_version.py`：游戏主逻辑
-* **Tip**：修改流速请在`play_interface_version2_final_version.py`中搜索fall_speed自行更改
 
 ## main.py 主流程与场景切换
 作为主函数，main.py 以状态机的形式对各个状态的执行逻辑进行了规定
