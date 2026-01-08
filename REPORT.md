@@ -1097,9 +1097,9 @@ import pygame as pg
 
 ### 全局配置
 
-```python
+python
 MENU_ITEMS = ["Start", "Settings", "Exit"]
-```
+
 
 定义了主菜单显示的三个选项文本。
 
@@ -1109,7 +1109,7 @@ MENU_ITEMS = ["Start", "Settings", "Exit"]
 
 为了适配不同分辨率（如 800x600, 1280x760, 1920x1080），该函数计算当前屏幕尺寸相对于基准尺寸（800x600）的缩放比例。
 
-```python
+``` python
 def _get_scale_factor(screen_size):
     base_width, base_height = 800, 600
     width, height = screen_size
@@ -1117,6 +1117,8 @@ def _get_scale_factor(screen_size):
     scale_w = width / base_width
     scale_h = height / base_height
     return min(scale_w, scale_h)
+
+```
 ```
 
 ### 界面绘制逻辑
