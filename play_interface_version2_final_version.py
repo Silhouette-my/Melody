@@ -261,7 +261,7 @@ def note_keyboard_judge(keyboard_statement,keyboard_input,screen,column_statemen
     if(keyboard_statement == 0):
         if(not len(rect_note_current[key_use])): # 如果该轨道没有音符
             return
-        if(rect_note_current[key_use][0].y+rect_note_current[key_use][0].height <= s_height/2): # 如果音符还没到判定区域
+        if(rect_note_current[key_use][0].y+rect_note_current[key_use][0].height <= s_height*3/4): # 如果音符还没到判定区域
             return
         if(rect_note_current[key_use][0].height == 10): # 普通音符
             judge_time_diff = np.fabs(note_current[key_use][0]-current_time) # 计算时间差
